@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <math.h>
+#include <unistd.h>
+#include <sys/time.h>
 
 //prints a 2x2 matrix with floating-point numbers
 void print2f(float temp[2][2])
@@ -87,6 +89,10 @@ void copy(float* p, float mat[4][4])
 
 int main()
 {
+    struct timeval start, end;
+
+    gettimeofday(&start, NULL);
+    
     //initialize matrices
     float M[4][4] = {{31, 77, -11, 26}, {-42, 14, 79, -53}, {-68, -10, 45, 90}, {34, 16, 38, -19}};
     float U[4][4] = {{1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
@@ -193,6 +199,12 @@ int main()
             }
         }
     }
+
+    gettimeofday(&end, NULL);
+
+    double time_taken = end.tv_usec - start.tv_usec; // in seconds
+
+    printf("time program took %f microseconds to execute\n", time_taken);
 
     return 0;
 }
