@@ -40,10 +40,10 @@ void transpose(float* restrict p, float mat[4][4])
 {
     for (unsigned int i = 0; i < 4; i++)
     {
-        for (unsigned int j = 0; j < 4; j++)
-        {
-            *(p + i * 4 + j) = mat[j][i];
-        }
+        *(p + i * 4 + 0) = mat[0][i];
+        *(p + i * 4 + 1) = mat[1][i];
+        *(p + i * 4 + 2) = mat[2][i];
+        *(p + i * 4 + 3) = mat[3][i];
     }
 }
 
@@ -67,10 +67,10 @@ void zero(float* restrict p)
 {
     for (unsigned int i = 0; i < 4; i++)
     {
-        for (unsigned int j = 0; j < 4; j++)
-        {
-            *(p + i * 4 + j) = 0;
-        }
+        *(p + i * 4 + 0) = 0;
+        *(p + i * 4 + 1) = 0;
+        *(p + i * 4 + 2) = 0;
+        *(p + i * 4 + 3) = 0;
     }
 }
 
