@@ -36,7 +36,7 @@ void print4f(float temp[4][4])
 }
 
 //transposes a matrix
-void transpose(float* p, float mat[4][4])
+void transpose(float* restrict p, float mat[4][4])
 {
     for (unsigned int i = 0; i < 4; i++)
     {
@@ -48,7 +48,7 @@ void transpose(float* p, float mat[4][4])
 }
 
 //performs matrix multiplication
-void multiply(float* p, float temp1[4][4], float temp2[4][4])
+void multiply(float* restrict p, float temp1[4][4], float temp2[4][4])
 {
     for (unsigned int i = 0; i < 4; i++)
     {
@@ -63,7 +63,7 @@ void multiply(float* p, float temp1[4][4], float temp2[4][4])
 }
 
 //sets all matrix indices to 0
-void zero(float* p)
+void zero(float* restrict p)
 {
     for (unsigned int i = 0; i < 4; i++)
     {
@@ -75,7 +75,7 @@ void zero(float* p)
 }
 
 //copies a matrix into another matrix
-void copy(float* p, float mat[4][4])
+void copy(float* restrict p, float mat[4][4])
 {
     for (unsigned int i = 0; i < 4; i++)
     {
