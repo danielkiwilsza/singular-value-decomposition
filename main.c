@@ -202,9 +202,9 @@ int main()
 
     gettimeofday(&end, NULL);
 
-    double time_taken = end.tv_usec - start.tv_usec; // in seconds
+    double time_taken = (end.tv_sec * 1000 + (end.tv_usec) / 1000 ) - (start.tv_sec * 1000 + (start.tv_usec) / 1000 ); // in seconds
 
-    printf("time program took %f microseconds to execute\n", time_taken);
+    printf("time program took %f milliseconds to execute\n", time_taken);
 
     return 0;
 }
