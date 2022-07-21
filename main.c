@@ -115,6 +115,18 @@ int main()
     float theta_l;
     float theta_r;
 
+    //matrix indices (use register int later)
+    float Mii;
+    float Mij;
+    float Mji;
+    float Mjj;
+
+    //matrix index operations
+    float sum_num;
+    float sum_denom;
+    float diff_num;
+    float diff_denom;
+
 
     printf("Start\n\nM:\n");
     print4f(M);
@@ -131,8 +143,18 @@ int main()
             {
                 printf("Sweep %d, Pair (%d - %d)\n\n", sweep, i+1, j+1);
 
-                theta_sum = atan( (M[j][i] + M[i][j]) / (M[j][j] - M[i][i]) );
-                theta_diff = atan( (M[j][i] - M[i][j]) / (M[j][j] + M[i][i]) );
+                Mii = M[i][i];
+                Mij = M[i][j];
+                Mji = M[j][i];
+                Mjj = M[j][j];
+
+                sum_num = Mji + Mij;
+                sum_denom = Mjj - Mii;
+                diff_num = Mji - Mij;
+                diff_denom = Mjj + Mii;
+
+                theta_sum = atan(sum_num / sum_denom);
+                theta_diff = atan(diff_num / diff_denom);
 
                 theta_l = (theta_sum - theta_diff) / 2;
                 theta_r = (theta_sum + theta_diff) / 2;
@@ -191,7 +213,6 @@ int main()
                 /*
                 printf("U:\n");
                 print4f(U);
-
                 printf("V:\n");
                 print4f(V);
                 */
