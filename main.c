@@ -3,6 +3,9 @@
 #include <unistd.h>
 #include <sys/time.h>
 
+#define debug 1
+#define debug_matrices 1
+
 //prints a 2x2 matrix with floating-point numbers
 void print2f(float temp[2][2])
 {
@@ -199,23 +202,45 @@ int main()
                 V_mod[2][2] = 1;
                 V_mod[3][3] = 1;
 
-                /*
-                printf("\ncos(theta_l): %f\n", cos(theta_l));
-                printf("sin(theta_l): %f\n", sin(theta_l));
-                printf("cos(theta_r): %f\n", cos(theta_r));
-                printf("sin(theta_r): %f\n\n", sin(theta_r));
-                */
+                if (debug)
+                {
+                    printf("M[i][i] = %f\n", Mii);
+                    printf("M[i][j] = %f\n", Mij);
+                    printf("M[j][i] = %f\n", Mji);
+                    printf("M[j][j] = %f\n", Mjj);
+                    printf("\n");
+
+                    printf("sum_num = %f\n", sum_num);
+                    printf("sum_denom = %f\n", sum_denom);
+                    printf("diff_num = %f\n", diff_num);
+                    printf("diff_denom = %f\n", diff_denom);
+                    printf("\n");
+
+                    printf("theta_sum: %f\n", theta_sum);
+                    printf("theta_diff: %f\n", theta_diff);
+                    printf("theta_l: %f\n", theta_l);
+                    printf("theta_r: %f\n", theta_r);
+                    printf("\n");
+
+                    printf("cos(theta_l): %f\n", cos(theta_l));
+                    printf("sin(theta_l): %f\n", sin(theta_l));
+                    printf("cos(theta_r): %f\n", cos(theta_r));
+                    printf("sin(theta_r): %f\n", sin(theta_r));
+                    printf("\n");
+                }
+
+                if (debug_matrices)
+                {
+                    printf("U:\n");
+                    print4f(U);
+
+                    printf("V:\n");
+                    print4f(V);
+                }
 
                 printf("M:\n");
                 print4f(M);
                 printf("\n\n");
-
-                /*
-                printf("U:\n");
-                print4f(U);
-                printf("V:\n");
-                print4f(V);
-                */
 
             }
         }
