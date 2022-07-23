@@ -221,8 +221,12 @@ int main()
                     printf("diff_denom =    M[j][j] + M[i][i] =     %f\n", diff_denom);
                     printf("\n");
 
-                    printf("theta_sum =     atan(sum_num / sum_denom) =       %f\n", theta_sum);
-                    printf("theta_diff =    atan(diff_num / diff_denom) =     %f\n", theta_diff);
+                    printf("sum_quot =      sum_num / sum_denom =       %f\n", sum_quot);
+                    printf("diff_quot =     diff_num / diff_denom =     %f\n", diff_quot);
+                    printf("\n");
+
+                    printf("theta_sum =     atan(sum_quot) =        %f\n", theta_sum);
+                    printf("theta_diff =    atan(diff_quot) =       %f\n", theta_diff);
                     printf("\n");
 
                     printf("theta_l =       (theta_sum - theta_diff) / 2 =    %f\n", theta_l);
