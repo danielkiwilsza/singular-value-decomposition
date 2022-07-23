@@ -129,6 +129,8 @@ int main()
     float sum_denom;
     float diff_num;
     float diff_denom;
+    float sum_quot;
+    float diff_quot;
 
 
     printf("Start\n\nM:\n");
@@ -156,8 +158,11 @@ int main()
                 diff_num = Mji - Mij;
                 diff_denom = Mjj + Mii;
 
-                theta_sum = atan(sum_num / sum_denom);
-                theta_diff = atan(diff_num / diff_denom);
+                sum_quot = sum_num / sum_denom;
+                diff_quot = diff_num / diff_denom;
+
+                theta_sum = atan(sum_quot);
+                theta_diff = atan(diff_quot);
 
                 theta_l = (theta_sum - theta_diff) / 2;
                 theta_r = (theta_sum + theta_diff) / 2;
