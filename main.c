@@ -210,16 +210,18 @@ int main()
                     printf("M[j][j] = %f\n", Mjj);
                     printf("\n");
 
-                    printf("sum_num = %f\n", sum_num);
-                    printf("sum_denom = %f\n", sum_denom);
-                    printf("diff_num = %f\n", diff_num);
-                    printf("diff_denom = %f\n", diff_denom);
+                    printf("sum_num =       M[j][i] + M[i][j] =     %f\n", sum_num);
+                    printf("sum_denom =     M[j][j] - M[i][i] =     %f\n", sum_denom);
+                    printf("diff_num =      M[j][i] - M[i][j] =     %f\n", diff_num);
+                    printf("diff_denom =    M[j][j] + M[i][i] =     %f\n", diff_denom);
                     printf("\n");
 
-                    printf("theta_sum: %f\n", theta_sum);
-                    printf("theta_diff: %f\n", theta_diff);
-                    printf("theta_l: %f\n", theta_l);
-                    printf("theta_r: %f\n", theta_r);
+                    printf("theta_sum =     atan(sum_num / sum_denom) =       %f\n", theta_sum);
+                    printf("theta_diff =    atan(diff_num / diff_denom) =     %f\n", theta_diff);
+                    printf("\n");
+
+                    printf("theta_l =       (theta_sum - theta_diff) / 2 =    %f\n", theta_l);
+                    printf("theta_r =       (theta_sum + theta_diff) / 2 =    %f\n", theta_r);
                     printf("\n");
 
                     printf("cos(theta_l): %f\n", cos(theta_l));
