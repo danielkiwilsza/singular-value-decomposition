@@ -6,6 +6,37 @@
 #define debug 1
 #define debug_matrices 1
 
+#define invfact2 0.5f
+#define invfact3 0.16666666666666666f
+#define invfact4 0.04166666666666666f
+#define invfact5 0.00833333333333333f
+#define invfact6 0.00138888888888888f
+#define invfact7 0.00019841269841269f
+#define invfact8 2.48015873015873e-05f
+#define inv3 0.3333333333333333f
+#define inv5 
+
+float aprx_atan_float(float x) {
+    if(x > 0.5f && x <= 1.0f) 
+        return 0.644f * x + 0.142f;
+    else if(x >= -0.5f && x <= 0.5f)
+        return 0.928f * x;
+    else
+        return 0.644f * x - 0.142f;
+}
+
+float taylor_sin(float x) {
+    return x - (x * x * x) * invfact3 + (x * x * x * x * x) * invfact5;
+}
+
+float taylor_cos(float x) {
+    return 1.0f - (x * x) * invfact2 + (x * x * x * x) * invfact4;
+}
+
+/*float taylor_atan(float x) {
+    return x - (x * x * x) 
+}*/
+
 //prints a 2x2 matrix with floating-point numbers
 void print2f(float temp[2][2])
 {
@@ -139,7 +170,7 @@ int main()
 
 
     //main program
-    for (unsigned int sweep = 1; sweep < 5; sweep++)
+    for (unsigned int sweep = 1; sweep < 10; sweep++)
     {
         //double for loop for matrix indexing
         for (unsigned int i = 0; i < 3; i++)
@@ -160,13 +191,18 @@ int main()
 
                 sum_quot = sum_num / sum_denom;
                 diff_quot = diff_num / diff_denom;
-
+                
+                /*
+                theta_sum = atan(sum_quot);
+                theta_diff = atan(diff_quot);
+                */
                 theta_sum = atan(sum_quot);
                 theta_diff = atan(diff_quot);
 
                 theta_l = (theta_sum - theta_diff) / 2;
                 theta_r = (theta_sum + theta_diff) / 2;
 
+                /*
                 U_mod[i][i] = cos(theta_l);
                 U_mod[i][j] = -sin(theta_l);
                 U_mod[j][i] = sin(theta_l);
@@ -176,6 +212,17 @@ int main()
                 V_mod[i][j] = -sin(theta_r);
                 V_mod[j][i] = sin(theta_r);
                 V_mod[j][j] = cos(theta_r);
+                */
+
+                U_mod[i][i] = taylor_cos(theta_l);
+                U_mod[i][j] = -taylor_sin(theta_l);
+                U_mod[j][i] = taylor_sin(theta_l);
+                U_mod[j][j] = taylor_cos(theta_l);
+
+                V_mod[i][i] = taylor_cos(theta_r);
+                V_mod[i][j] = -taylor_sin(theta_r);
+                V_mod[j][i] = taylor_sin(theta_r);
+                V_mod[j][j] = taylor_cos(theta_r);
 
                 transpose(*U_mod_T, U_mod);
                 transpose(*V_mod_T, V_mod);
