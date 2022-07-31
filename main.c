@@ -1,10 +1,12 @@
 #include <stdio.h>
 #include <math.h>
 #include <unistd.h>
+#include <stdint.h>
 #include <sys/time.h>
 
 #define debug 1
 #define debug_matrices 1
+#define FIXED_FRACTIONAL_PART 16
 
 #define invfact2 0.5f
 #define invfact3 0.16666666666666666f
@@ -13,8 +15,26 @@
 #define invfact6 0.00138888888888888f
 #define invfact7 0.00019841269841269f
 #define invfact8 2.48015873015873e-05f
-#define inv3 0.3333333333333333f
-#define inv5 
+
+#define invfact2fix 32768
+#define invfact3fix 10922
+#define invfact4fix 2730
+#define invfact5fix 546
+//#define inv3 0.3333333333333333f
+
+typedef int32_t fixed_t;
+
+float fix2float(fixed_t in) {
+    return ((float) in / (float) (1 << FIXED_FRACTIONAL_PART));
+}
+
+fixed_t float2fix(float in) {
+    return (fixed_t) (in * (1 << FIXED_FRACTIONAL_PART));
+}
+
+fixed_t fixed_multiply(fixed_t a, fixed_t b) {
+    return ((fixed_t) a * (fixed_t) b) / (1 << 16);
+}
 
 float aprx_atan_float(float x) {
     if(x > 0.5f && x <= 1.0f) 
@@ -31,6 +51,19 @@ float taylor_sin(float x) {
 
 float taylor_cos(float x) {
     return 1.0f - (x * x) * invfact2 + (x * x * x * x) * invfact4;
+}
+
+fixed_t taylor_sin_fix(fixed_t x) {
+    fixed_t x2 = fixed_multiply(x, x);
+    fixed_t x3 = fixed_multiply(x2, x);
+    fixed_t x5 = fixed_multiply(x3, x2);
+    return x - x3 * invfact3fix + x5 * invfact5fix;
+}
+
+fixed_t taylor_cos_fix(fixed_t x) {
+    fixed_t x2 = fixed_multiply(x, x);
+    fixed_t x4 = fixed_multiply(x2, x2);
+    return float2fix(1.0f) - x2 * invfact2fix + x4 * invfact4fix;
 }
 
 /*float taylor_atan(float x) {
@@ -120,6 +153,26 @@ void copy(float* restrict p, float mat[4][4])
     }
 }
 
+int testfunc() {
+    fixed_t inv2 = float2fix(invfact2);
+    fixed_t inv3 = float2fix(invfact3);
+    fixed_t inv4 = float2fix(invfact4);
+    fixed_t inv5 = float2fix(invfact5);
+    fixed_t inv6 = float2fix(invfact6);
+    fixed_t inv7 = float2fix(invfact7);
+    fixed_t inv8 = float2fix(invfact8); 
+    fixed_t thrity = float2fix(30.0f); 
+    printf( " Fix: %d\n" , inv2 );
+    printf( " Fix: %d\n" , inv3);
+    printf( " Fix: %d\n" , inv4 );
+    printf( " Fix: %d\n" , inv5 );
+    printf( " Fix: %d\n" , inv6 );
+    printf( " Fix: %d\n" , inv7 );
+    printf( " Fix: %d\n" , inv8 );
+    printf( " Fix: %d\n" , thrity );
+    //float flt = fix2float(fix);
+    //printf(" Float: %f\n", flt);
+}
 
 int main()
 {
@@ -170,7 +223,7 @@ int main()
 
 
     //main program
-    for (unsigned int sweep = 1; sweep < 10; sweep++)
+    for (unsigned int sweep = 1; sweep < 5; sweep++)
     {
         //double for loop for matrix indexing
         for (unsigned int i = 0; i < 3; i++)
@@ -213,16 +266,17 @@ int main()
                 V_mod[j][i] = sin(theta_r);
                 V_mod[j][j] = cos(theta_r);
                 */
+                fixed_t thetalfix = float2fix(theta_l);
+                fixed_t thetarfix = float2fix(theta_r);
+                U_mod[i][i] = fix2float(taylor_cos_fix(thetalfix));
+                U_mod[i][j] = fix2float(-taylor_sin_fix(thetalfix));
+                U_mod[j][i] = fix2float(taylor_sin_fix(thetalfix));
+                U_mod[j][j] = fix2float(taylor_cos_fix(thetalfix));
 
-                U_mod[i][i] = taylor_cos(theta_l);
-                U_mod[i][j] = -taylor_sin(theta_l);
-                U_mod[j][i] = taylor_sin(theta_l);
-                U_mod[j][j] = taylor_cos(theta_l);
-
-                V_mod[i][i] = taylor_cos(theta_r);
-                V_mod[i][j] = -taylor_sin(theta_r);
-                V_mod[j][i] = taylor_sin(theta_r);
-                V_mod[j][j] = taylor_cos(theta_r);
+                V_mod[i][i] = fix2float(taylor_cos_fix(thetarfix));
+                V_mod[i][j] = fix2float(-taylor_sin_fix(thetarfix));
+                V_mod[j][i] = fix2float(taylor_sin_fix(thetarfix));
+                V_mod[j][j] = fix2float(taylor_cos_fix(thetarfix));
 
                 transpose(*U_mod_T, U_mod);
                 transpose(*V_mod_T, V_mod);
