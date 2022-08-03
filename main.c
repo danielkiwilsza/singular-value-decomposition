@@ -1,8 +1,10 @@
+
 #include <stdio.h>
 #include <math.h>
 #include <unistd.h>
 #include <stdint.h>
 #include <sys/time.h>
+#include <assert.h>
 
 #define debug 1
 #define debug_matrices 1
@@ -22,7 +24,291 @@
 #define invfact5fix 546
 //#define inv3 0.3333333333333333f
 
+float lookup_sin_float[128] = {
+0.00000f,
+0.04907f,
+0.09802f,
+0.14673f,
+0.19509f,
+0.24298f,
+0.29028f,
+0.33689f,
+0.38268f,
+0.42756f,
+0.47140f,
+0.51410f,
+0.55557f,
+0.59570f,
+0.63439f,
+0.67156f,
+0.70711f,
+0.74095f,
+0.77301f,
+0.80321f,
+0.83147f,
+0.85773f,
+0.88192f,
+0.90399f,
+0.92388f,
+0.94154f,
+0.95694f,
+0.97003f,
+0.98079f,
+0.98918f,
+0.99518f,
+0.99880f,
+1.00000f,
+0.99880f,
+0.99518f,
+0.98918f,
+0.98079f,
+0.97003f,
+0.95694f,
+0.94154f,
+0.92388f,
+0.90399f,
+0.88192f,
+0.85773f,
+0.83147f,
+0.80321f,
+0.77301f,
+0.74095f,
+0.70711f,
+0.67156f,
+0.63439f,
+0.59570f,
+0.55557f,
+0.51410f,
+0.47140f,
+0.42756f,
+0.38268f,
+0.33689f,
+0.29028f,
+0.24298f,
+0.19509f,
+0.14673f,
+0.09802f,
+0.04907f,
+0.00000f,
+-0.04907f,
+-0.09802f,
+-0.14673f,
+-0.19509f,
+-0.24298f,
+-0.29028f,
+-0.33689f,
+-0.38268f,
+-0.42756f,
+-0.47140f,
+-0.51410f,
+-0.55557f,
+-0.59570f,
+-0.63439f,
+-0.67156f,
+-0.70711f,
+-0.74095f,
+-0.77301f,
+-0.80321f,
+-0.83147f,
+-0.85773f,
+-0.88192f,
+-0.90399f,
+-0.92388f,
+-0.94154f,
+-0.95694f,
+-0.97003f,
+-0.98079f,
+-0.98918f,
+-0.99518f,
+-0.99880f,
+-1.00000f,
+-0.99880f,
+-0.99518f,
+-0.98918f,
+-0.98079f,
+-0.97003f,
+-0.95694f,
+-0.94154f,
+-0.92388f,
+-0.90399f,
+-0.88192f,
+-0.85773f,
+-0.83147f,
+-0.80321f,
+-0.77301f,
+-0.74095f,
+-0.70711f,
+-0.67156f,
+-0.63439f,
+-0.59570f,
+-0.55557f,
+-0.51410f,
+-0.47140f,
+-0.42756f,
+-0.38268f,
+-0.33689f,
+-0.29028f,
+-0.24298f,
+-0.19509f,
+-0.14673f,
+-0.09802f,
+-0.04907f
+};
+
+float lookup_cos_float[128] = {
+1.00000f,
+0.99880f,
+0.99518f,
+0.98918f,
+0.98079f,
+0.97003f,
+0.95694f,
+0.94154f,
+0.92388f,
+0.90399f,
+0.88192f,
+0.85773f,
+0.83147f,
+0.80321f,
+0.77301f,
+0.74095f,
+0.70711f,
+0.67156f,
+0.63439f,
+0.59570f,
+0.55557f,
+0.51410f,
+0.47140f,
+0.42756f,
+0.38268f,
+0.33689f,
+0.29028f,
+0.24298f,
+0.19509f,
+0.14673f,
+0.09802f,
+0.04907f,
+-0.00000f,
+-0.04907f,
+-0.09802f,
+-0.14673f,
+-0.19509f,
+-0.24298f,
+-0.29028f,
+-0.33689f,
+-0.38268f,
+-0.42756f,
+-0.47140f,
+-0.51410f,
+-0.55557f,
+-0.59570f,
+-0.63439f,
+-0.67156f,
+-0.70711f,
+-0.74095f,
+-0.77301f,
+-0.80321f,
+-0.83147f,
+-0.85773f,
+-0.88192f,
+-0.90399f,
+-0.92388f,
+-0.94154f,
+-0.95694f,
+-0.97003f,
+-0.98079f,
+-0.98918f,
+-0.99518f,
+-0.99880f,
+-1.00000f,
+-0.99880f,
+-0.99518f,
+-0.98918f,
+-0.98079f,
+-0.97003f,
+-0.95694f,
+-0.94154f,
+-0.92388f,
+-0.90399f,
+-0.88192f,
+-0.85773f,
+-0.83147f,
+-0.80321f,
+-0.77301f,
+-0.74095f,
+-0.70711f,
+-0.67156f,
+-0.63439f,
+-0.59570f,
+-0.55557f,
+-0.51410f,
+-0.47140f,
+-0.42756f,
+-0.38268f,
+-0.33689f,
+-0.29028f,
+-0.24298f,
+-0.19509f,
+-0.14673f,
+-0.09802f,
+-0.04907f,
+-0.00000f,
+0.04907f,
+0.09802f,
+0.14673f,
+0.19509f,
+0.24298f,
+0.29028f,
+0.33689f,
+0.38268f,
+0.42756f,
+0.47140f,
+0.51410f,
+0.55557f,
+0.59570f,
+0.63439f,
+0.67156f,
+0.70711f,
+0.74095f,
+0.77301f,
+0.80321f,
+0.83147f,
+0.85773f,
+0.88192f,
+0.90399f,
+0.92388f,
+0.94154f,
+0.95694f,
+0.97003f,
+0.98079f,
+0.98918f,
+0.99518f,
+0.99880f
+};
+
 typedef int32_t fixed_t;
+typedef int64_t dw_fixed_t;
+
+float wrap2pi_float(float angle) {
+    float twopi = 2.0f * 3.141592f;
+    return angle - twopi * floor ( angle / twopi);
+}
+
+int lookupindex(float angle) {
+    float a = wrap2pi_float(angle);
+    float b = 3.141592f / 64.0f;
+    int index = ((int) a / b);
+    assert(index < 128);
+    return index;
+}
+
+float lookup_sin(float angle) {
+    return lookup_sin_float[lookupindex(angle)];
+}
+
+float lookup_cos(float angle) {
+    return lookup_cos_float[lookupindex(angle)];
+}
 
 float fix2float(fixed_t in) {
     return ((float) in / (float) (1 << FIXED_FRACTIONAL_PART));
@@ -33,7 +319,7 @@ fixed_t float2fix(float in) {
 }
 
 fixed_t fixed_multiply(fixed_t a, fixed_t b) {
-    return ((fixed_t) a * (fixed_t) b) / (1 << 16);
+    return ((dw_fixed_t) a * (dw_fixed_t) b) / (1 << 16);
 }
 
 float aprx_atan_float(float x) {
@@ -223,7 +509,7 @@ int main()
 
 
     //main program
-    for (unsigned int sweep = 1; sweep < 5; sweep++)
+    for (unsigned int sweep = 1; sweep < 100; sweep++)
     {
         //double for loop for matrix indexing
         for (unsigned int i = 0; i < 3; i++)
@@ -266,17 +552,15 @@ int main()
                 V_mod[j][i] = sin(theta_r);
                 V_mod[j][j] = cos(theta_r);
                 */
-                fixed_t thetalfix = float2fix(theta_l);
-                fixed_t thetarfix = float2fix(theta_r);
-                U_mod[i][i] = fix2float(taylor_cos_fix(thetalfix));
-                U_mod[i][j] = fix2float(-taylor_sin_fix(thetalfix));
-                U_mod[j][i] = fix2float(taylor_sin_fix(thetalfix));
-                U_mod[j][j] = fix2float(taylor_cos_fix(thetalfix));
+                U_mod[i][i] = lookup_cos(theta_l);
+                U_mod[i][j] = -lookup_sin(theta_l);
+                U_mod[j][i] = lookup_sin(theta_l);
+                U_mod[j][j] = lookup_cos(theta_l);
 
-                V_mod[i][i] = fix2float(taylor_cos_fix(thetarfix));
-                V_mod[i][j] = fix2float(-taylor_sin_fix(thetarfix));
-                V_mod[j][i] = fix2float(taylor_sin_fix(thetarfix));
-                V_mod[j][j] = fix2float(taylor_cos_fix(thetarfix));
+                V_mod[i][i] = lookup_cos(theta_r);
+                V_mod[i][j] = -lookup_sin(theta_r);
+                V_mod[j][i] = lookup_sin(theta_r);
+                V_mod[j][j] = lookup_cos(theta_r);
 
                 transpose(*U_mod_T, U_mod);
                 transpose(*V_mod_T, V_mod);
