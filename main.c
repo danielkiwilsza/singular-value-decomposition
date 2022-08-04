@@ -4,9 +4,10 @@
 #include <stdint.h>
 #include <sys/time.h>
 #include <assert.h>
+#include <stdlib.h>
 
-#define debug 1
-#define debug_matrices 1
+#define debug 0
+#define debug_matrices 0
 #define FIXED_FRACTIONAL_PART 16
 
 #define invfact2 0.5f
@@ -297,7 +298,6 @@ int lookupindex(float angle) {
     float a = wrap2pi_float(angle);
     float b = 3.141592f / 64.0f;
     int index = (int)(a / b);
-    assert(index < 128);
     return index;
 }
 
@@ -321,14 +321,37 @@ fixed_t fixed_multiply(fixed_t a, fixed_t b) {
     return ((dw_fixed_t) a * (dw_fixed_t) b) / (1 << 16);
 }
 
-float aprx_atan_float(float x) {
-    if(x > 0.5f && x <= 1.0f)
-        return 0.644f * x + 0.142f;
-    else if(x >= -0.5f && x <= 0.5f)
-        return 0.928f * x;
+float aprx_atan_float(float a) {
+
+    if(a > 0.5f && a <= 1.0f)
+        return 0.644f * a + 0.142f;
+    else if(a >= -0.5f && a <= 0.5f)
+        return 0.928f * a;
     else
-        return 0.644f * x - 0.142f;
+        return 0.644f * a - 0.142f;
 }
+
+float aprx_atan2_float(float x) {
+    if(abs(x) <= 1.0f) 
+        return aprx_atan_float(x);
+    else if(x > 1.0f)
+        return 3.141592f / 2.0f  -  aprx_atan_float(1 / x);
+    else 
+        return -3.141592f / 2.0f  -  aprx_atan_float(1 / x);
+}
+
+/*float aprx_cot_float(float x) {
+    if(x > 1 && x <= 1.77) {
+        return -0.347 * x + 1.12;
+    }
+    else if (x > 1.77 && x <= 3.307) {
+        return -0.138 * x + 0.75;
+    }
+    else if (x > 
+
+
+    }
+}*/
 
 float taylor_sin(float x) {
     return x - (x * x * x) * invfact3 + (x * x * x * x * x) * invfact5;
@@ -531,15 +554,16 @@ int main()
 
                 /*
                 theta_sum = atan(sum_quot);
-                theta_diff = atan(diff_quot);
-                */
-                theta_sum = atan(sum_quot);
-                theta_diff = atan(diff_quot);
+                theta_diff = atan(diff_quot);*/
+                
+                
+                theta_sum = aprx_atan2_float(sum_quot);
+                theta_diff = aprx_atan2_float(diff_quot);
 
                 theta_l = (theta_sum - theta_diff) / 2;
                 theta_r = (theta_sum + theta_diff) / 2;
 
-                /*
+                
                 U_mod[i][i] = cos(theta_l);
                 U_mod[i][j] = -sin(theta_l);
                 U_mod[j][i] = sin(theta_l);
@@ -549,7 +573,8 @@ int main()
                 V_mod[i][j] = -sin(theta_r);
                 V_mod[j][i] = sin(theta_r);
                 V_mod[j][j] = cos(theta_r);
-                */
+                
+               /*
                 U_mod[i][i] = lookup_cos(theta_l);
                 U_mod[i][j] = -lookup_sin(theta_l);
                 U_mod[j][i] = lookup_sin(theta_l);
@@ -558,7 +583,7 @@ int main()
                 V_mod[i][i] = lookup_cos(theta_r);
                 V_mod[i][j] = -lookup_sin(theta_r);
                 V_mod[j][i] = lookup_sin(theta_r);
-                V_mod[j][j] = lookup_cos(theta_r);
+                V_mod[j][j] = lookup_cos(theta_r);*/
 
                 transpose(*U_mod_T, U_mod);
                 transpose(*V_mod_T, V_mod);
