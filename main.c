@@ -66,6 +66,7 @@ void multiply(float* restrict p, float temp1[4][4], float temp2[4][4])
     }
 }
 
+
 //sets all matrix indices to 0
 void zero(float* restrict p)
 {
@@ -73,15 +74,9 @@ void zero(float* restrict p)
 }
 
 //copies a matrix into another matrix
-void copy(float* restrict p, float mat[4][4])
+void copy(float* restrict p, float* mat)
 {
-    for (unsigned int i = 0; i < 4; i++)
-    {
-        for (unsigned int j = 0; j < 4; j++)
-        {
-            *(p + i * 4 + j) = mat[i][j];
-        }
-    }
+    memcpy(p, mat, sizeof(float) * 16);
 }
 
 
@@ -104,6 +99,8 @@ int main()
     float U_mod_T[4][4] = {{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}};
     float V_mod_T[4][4] = {{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}};
 
+    float transitional_1[4][4] = {{0}};
+    float transitional_2[4][4] = {{0}};
     //temporary matrix
     float temp[4][4] = {{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}};
 
@@ -175,11 +172,11 @@ int main()
                 transpose(*U_mod_T, U_mod);
                 transpose(*V_mod_T, V_mod);
 
-                copy(*temp, U);
+                /*copy(*temp, *U);
                 zero(*U);
-                multiply(*U, temp, U_mod_T);
+                multiply(*U, temp, U_mod_T);*/
 
-                copy(*temp, V);
+                copy(*temp, *V);
                 zero(*V);
                 multiply(*V, temp, V_mod_T);
 
