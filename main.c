@@ -2,9 +2,10 @@
 #include <math.h>
 #include <unistd.h>
 #include <sys/time.h>
+#include <string.h>
 
-#define debug 1
-#define debug_matrices 1
+#define debug 0
+#define debug_matrices 0
 
 //prints a 2x2 matrix with floating-point numbers
 void print2f(float temp[2][2])
@@ -68,13 +69,7 @@ void multiply(float* restrict p, float temp1[4][4], float temp2[4][4])
 //sets all matrix indices to 0
 void zero(float* restrict p)
 {
-    for (unsigned int i = 0; i < 4; i++)
-    {
-        *(p + i * 4 + 0) = 0;
-        *(p + i * 4 + 1) = 0;
-        *(p + i * 4 + 2) = 0;
-        *(p + i * 4 + 3) = 0;
-    }
+    memset(p, 0, sizeof(float) * 16);
 }
 
 //copies a matrix into another matrix
@@ -133,20 +128,20 @@ int main()
     float diff_quot;
 
 
-    printf("Start\n\nM:\n");
-    print4f(M);
-    printf("\n\n");
+    //printf("Start\n\nM:\n");
+    //print4f(M);
+    //printf("\n\n");
 
 
     //main program
-    for (unsigned int sweep = 1; sweep < 5; sweep++)
+    for (unsigned int sweep = 1; sweep < 30; sweep++)
     {
         //double for loop for matrix indexing
         for (unsigned int i = 0; i < 3; i++)
         {
             for (unsigned int j = i+1; j < 4; j++)
             {
-                printf("Sweep %d, Pair (%d - %d)\n\n", sweep, i+1, j+1);
+                //printf("Sweep %d, Pair (%d - %d)\n\n", sweep, i+1, j+1);
 
                 Mii = M[i][i];
                 Mij = M[i][j];
@@ -249,13 +244,16 @@ int main()
                     print4f(V);
                 }
 
-                printf("M:\n");
-                print4f(M);
-                printf("\n\n");
+                //printf("M:\n");
+                //print4f(M);
+                //printf("\n\n");
 
             }
+            
         }
+        
     }
+    print4f(M);
 
     gettimeofday(&end, NULL);
 
