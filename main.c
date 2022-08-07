@@ -360,7 +360,7 @@ float aprx_sin2(float x) {
     printf("Gave sin wrap to %.4f\n", x);
     float a = wrap2pi_float(x);
     printf("Sin wrap to %.4f\n", a);
-    if(a < 3.141592f / 2.0f) {
+    if(a < 3.141592f * 0.5f) {
         return aprx_sin(a);
     }
     else if(a < 3.141592f) {
@@ -612,13 +612,13 @@ int main()
                 
                 
                 U_mod[i][i] = lookup_cos(theta_l);
-                U_mod[i][j] = -lookup_sin(theta_l);
-                U_mod[j][i] = lookup_sin(theta_l);
+                U_mod[i][j] = -aprx_sin2(theta_l);
+                U_mod[j][i] = aprx_sin2(theta_l);
                 U_mod[j][j] = lookup_cos(theta_l);
 
                 V_mod[i][i] = lookup_cos(theta_r);
-                V_mod[i][j] = -lookup_sin(theta_r);
-                V_mod[j][i] = lookup_sin(theta_r);
+                V_mod[i][j] = -aprx_sin2(theta_r);
+                V_mod[j][i] = aprx_sin2(theta_r);
                 V_mod[j][j] = lookup_cos(theta_r);
 
                 transpose(*U_mod_T, U_mod);
