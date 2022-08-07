@@ -340,6 +340,43 @@ float aprx_atan2_float(float x) {
         return -3.141592f / 2.0f  -  aprx_atan_float(1 / x);
 }
 
+float aprx_sin(float x) {
+    assert(x >= 0);
+    if(x >= 0.0f && x <= 0.5f) {
+        return 0.958f * x;
+    }
+    else if(x > 0.5f && x <= 1.005f) {
+        return 0.724f * x + 0.117f;
+    }
+    else if(x > 1.005f && x <= 1.275f) {
+        return 0.418f * x + 0.424f;
+    }
+    else {
+        return 0.147f * x + 0.769f;
+    }
+}
+
+float aprx_sin2(float x) {
+    printf("Gave sin wrap to %.4f\n", x);
+    float a = wrap2pi_float(x);
+    printf("Sin wrap to %.4f\n", a);
+    if(a < 3.141592f / 2.0f) {
+        return aprx_sin(a);
+    }
+    else if(a < 3.141592f) {
+        return aprx_sin(3.141592f - a);
+    }
+    else if(a < 1.5f * 3.141592f) {
+        return -aprx_sin(a - 3.141592f);
+    }
+    else {
+        return -aprx_sin(2.0f * 3.141592f - a);
+    }
+
+}
+
+
+
 /*float aprx_cot_float(float x) {
     if(x > 1 && x <= 1.77) {
         return -0.347 * x + 1.12;
@@ -530,7 +567,7 @@ int main()
 
 
     //main program
-    for (unsigned int sweep = 1; sweep < 30; sweep++)
+    for (unsigned int sweep = 1; sweep < 10; sweep++)
     {
         //double for loop for matrix indexing
         for (unsigned int i = 0; i < 3; i++)
@@ -562,9 +599,8 @@ int main()
 
                 theta_l = (theta_sum - theta_diff) / 2;
                 theta_r = (theta_sum + theta_diff) / 2;
-
                 
-                U_mod[i][i] = cos(theta_l);
+               /* U_mod[i][i] = cos(theta_l);
                 U_mod[i][j] = -sin(theta_l);
                 U_mod[j][i] = sin(theta_l);
                 U_mod[j][j] = cos(theta_l);
@@ -572,9 +608,9 @@ int main()
                 V_mod[i][i] = cos(theta_r);
                 V_mod[i][j] = -sin(theta_r);
                 V_mod[j][i] = sin(theta_r);
-                V_mod[j][j] = cos(theta_r);
+                V_mod[j][j] = cos(theta_r);*/
                 
-               /*
+                
                 U_mod[i][i] = lookup_cos(theta_l);
                 U_mod[i][j] = -lookup_sin(theta_l);
                 U_mod[j][i] = lookup_sin(theta_l);
@@ -583,7 +619,7 @@ int main()
                 V_mod[i][i] = lookup_cos(theta_r);
                 V_mod[i][j] = -lookup_sin(theta_r);
                 V_mod[j][i] = lookup_sin(theta_r);
-                V_mod[j][j] = lookup_cos(theta_r);*/
+                V_mod[j][j] = lookup_cos(theta_r);
 
                 transpose(*U_mod_T, U_mod);
                 transpose(*V_mod_T, V_mod);
