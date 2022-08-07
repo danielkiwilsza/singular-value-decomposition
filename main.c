@@ -7,7 +7,8 @@
 #include <stdlib.h>
 
 //control if floating-point arithmetic is run
-#define floating_arithmetic 0
+#define floating_arithmetic 1
+#define floating_uses_trig_approximations 1
 
 //general debugging
 #define debug_matrices 0
@@ -546,6 +547,8 @@ int main()
     //fixed_t V_mod_32[4][4] = {{0x7FFFFFFF, 0, 0, 0}, {0, 0x7FFFFFFF, 0, 0}, {0, 0, 0x7FFFFFFF, 0}, {0, 0, 0, 0x7FFFFFFF}};	//scale factor: 2^31
     fixed_t U_mod_32[4][4] = {{1048576, 0, 0, 0}, {0, 1048576, 0, 0}, {0, 0, 1048576, 0}, {0, 0, 0, 1048576}};	                //scale factor: 2^20
     fixed_t V_mod_32[4][4] = {{1048576, 0, 0, 0}, {0, 1048576, 0, 0}, {0, 0, 1048576, 0}, {0, 0, 0, 1048576}};	                //scale factor: 2^20
+    //fixed_t U_mod_32[4][4] = {{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}};
+    //fixed_t V_mod_32[4][4] = {{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}};
 
     //transposes of modified U and V matrices
     float U_mod_T[4][4] = {{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}};
@@ -647,33 +650,42 @@ int main()
                     sum_quot = sum_num / sum_denom;
                     diff_quot = diff_num / diff_denom;
 
-                    theta_sum = aprx_atan2_float(sum_quot);
-                    theta_diff = aprx_atan2_float(diff_quot);
+                    if (floating_uses_trig_approximations)
+                    {
+                        theta_sum = aprx_atan2_float(sum_quot);
+                        theta_diff = aprx_atan2_float(diff_quot);
 
-                    theta_l = (theta_sum - theta_diff) / 2;
-                    theta_r = (theta_sum + theta_diff) / 2;
+                        theta_l = (theta_sum - theta_diff) / 2;
+                        theta_r = (theta_sum + theta_diff) / 2;
 
-                    U_mod[i][i] = cos(theta_l);
-                    U_mod[i][j] = -sin(theta_l);
-                    U_mod[j][i] = sin(theta_l);
-                    U_mod[j][j] = cos(theta_l);
+                        U_mod[i][i] = lookup_cos(theta_l);
+                        U_mod[i][j] = -lookup_sin(theta_l);
+                        U_mod[j][i] = lookup_sin(theta_l);
+                        U_mod[j][j] = lookup_cos(theta_l);
 
-                    V_mod[i][i] = cos(theta_r);
-                    V_mod[i][j] = -sin(theta_r);
-                    V_mod[j][i] = sin(theta_r);
-                    V_mod[j][j] = cos(theta_r);
+                        V_mod[i][i] = lookup_cos(theta_r);
+                        V_mod[i][j] = -lookup_sin(theta_r);
+                        V_mod[j][i] = lookup_sin(theta_r);
+                        V_mod[j][j] = lookup_cos(theta_r);
+                    }
+                    else
+                    {
+                        theta_sum = atan(sum_quot);
+                        theta_diff = atan(diff_quot);
 
-                    /*
-                    U_mod[i][i] = lookup_cos(theta_l);
-                    U_mod[i][j] = -lookup_sin(theta_l);
-                    U_mod[j][i] = lookup_sin(theta_l);
-                    U_mod[j][j] = lookup_cos(theta_l);
+                        theta_l = (theta_sum - theta_diff) / 2;
+                        theta_r = (theta_sum + theta_diff) / 2;
 
-                    V_mod[i][i] = lookup_cos(theta_r);
-                    V_mod[i][j] = -lookup_sin(theta_r);
-                    V_mod[j][i] = lookup_sin(theta_r);
-                    V_mod[j][j] = lookup_cos(theta_r);
-                    */
+                        U_mod[i][i] = cos(theta_l);
+                        U_mod[i][j] = -sin(theta_l);
+                        U_mod[j][i] = sin(theta_l);
+                        U_mod[j][j] = cos(theta_l);
+
+                        V_mod[i][i] = cos(theta_r);
+                        V_mod[i][j] = -sin(theta_r);
+                        V_mod[j][i] = sin(theta_r);
+                        V_mod[j][j] = cos(theta_r);
+                    }
 
                     transpose(*U_mod_T, U_mod);
                     transpose(*V_mod_T, V_mod);
@@ -962,7 +974,6 @@ int main()
     gettimeofday(&end, NULL);
     double time_taken = (end.tv_sec * 1 + (end.tv_usec) / 1 ) - (start.tv_sec * 1 + (start.tv_usec) / 1 ); // in seconds
     printf("time program took %d microseconds to execute\n", (int)time_taken);
-
 
     return 0;
 }
