@@ -1,16 +1,13 @@
 #include <stdio.h>
 #include <math.h>
-//#include <unistd.h>
+#include <unistd.h>
 #include <stdint.h>
-//#include <sys/time.h>
+#include <sys/time.h>
 #include <assert.h>
 #include <stdlib.h>
 
-/*
-//control which arithmetic is run
-#define floating_arithmetic
-#define fixed_arithmetic
-*/
+//control if floating-point arithmetic is run
+#define floating_arithmetic 0
 
 //general debugging
 #define debug_matrices 0
@@ -525,10 +522,8 @@ int testfunc() {
 
 int main()
 {
-    /*
     struct timeval start, end;
     gettimeofday(&start, NULL);
-    */
 
     //initialize matrices
     float M[4][4] = {{31, 77, -11, 26}, {-42, 14, 79, -53}, {-68, -10, 45, 90}, {34, 16, 38, -19}};
@@ -536,9 +531,11 @@ int main()
     float V[4][4] = {{1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
 
     short int M_12[4][4] = {{31, 77, -11, 26}, {-42, 14, 79, -53}, {-68, -10, 45, 90}, {34, 16, 38, -19}};
-    fixed_t M_32[4][4];                                                                                                 //scale factor: 2^31 / 2^11 = 2^20
-    fixed_t U_32[4][4] = {{0x7FFFFFFF, 0, 0, 0}, {0, 0x7FFFFFFF, 0, 0}, {0, 0, 0x7FFFFFFF, 0}, {0, 0, 0, 0x7FFFFFFF}};  //scale factor: 2^31 / 2^0 = 2^31
-    fixed_t V_32[4][4] = {{0x7FFFFFFF, 0, 0, 0}, {0, 0x7FFFFFFF, 0, 0}, {0, 0, 0x7FFFFFFF, 0}, {0, 0, 0, 0x7FFFFFFF}};	//scale factor: 2^31
+    fixed_t M_32[4][4];                                                                                                     //scale factor: 2^31 / 2^11 = 2^20
+    //fixed_t U_32[4][4] = {{0x7FFFFFFF, 0, 0, 0}, {0, 0x7FFFFFFF, 0, 0}, {0, 0, 0x7FFFFFFF, 0}, {0, 0, 0, 0x7FFFFFFF}};    //scale factor: 2^31 / 2^0 = 2^31
+    //fixed_t V_32[4][4] = {{0x7FFFFFFF, 0, 0, 0}, {0, 0x7FFFFFFF, 0, 0}, {0, 0, 0x7FFFFFFF, 0}, {0, 0, 0, 0x7FFFFFFF}};	//scale factor: 2^31
+    fixed_t U_32[4][4] = {{1048576, 0, 0, 0}, {0, 1048576, 0, 0}, {0, 0, 1048576, 0}, {0, 0, 0, 1048576}};                  //scale factor: 2^20
+    fixed_t V_32[4][4] = {{1048576, 0, 0, 0}, {0, 1048576, 0, 0}, {0, 0, 1048576, 0}, {0, 0, 0, 1048576}};	                //scale factor: 2^20
 
 
     //modified U and V matrices
@@ -547,8 +544,8 @@ int main()
 
     //fixed_t U_mod_32[4][4] = {{0x7FFFFFFF, 0, 0, 0}, {0, 0x7FFFFFFF, 0, 0}, {0, 0, 0x7FFFFFFF, 0}, {0, 0, 0, 0x7FFFFFFF}};	//scale factor: 2^31
     //fixed_t V_mod_32[4][4] = {{0x7FFFFFFF, 0, 0, 0}, {0, 0x7FFFFFFF, 0, 0}, {0, 0, 0x7FFFFFFF, 0}, {0, 0, 0, 0x7FFFFFFF}};	//scale factor: 2^31
-    fixed_t U_mod_32[4][4] = {{1048576, 0, 0, 0}, {0, 1048576, 0, 0}, {0, 0, 1048576, 0}, {0, 0, 0, 1048576}};	//scale factor: 2^20
-    fixed_t V_mod_32[4][4] = {{1048576, 0, 0, 0}, {0, 1048576, 0, 0}, {0, 0, 1048576, 0}, {0, 0, 0, 1048576}};	//scale factor: 2^20
+    fixed_t U_mod_32[4][4] = {{1048576, 0, 0, 0}, {0, 1048576, 0, 0}, {0, 0, 1048576, 0}, {0, 0, 0, 1048576}};	                //scale factor: 2^20
+    fixed_t V_mod_32[4][4] = {{1048576, 0, 0, 0}, {0, 1048576, 0, 0}, {0, 0, 1048576, 0}, {0, 0, 0, 1048576}};	                //scale factor: 2^20
 
     //transposes of modified U and V matrices
     float U_mod_T[4][4] = {{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}};
@@ -634,60 +631,101 @@ int main()
                     printf("Sweep %d, Pair (%d - %d)\n\n", sweep, i+1, j+1);
                 }
 
-                Mii = M[i][i];
-                Mij = M[i][j];
-                Mji = M[j][i];
-                Mjj = M[j][j];
+                //floating-point operations
+                if (floating_arithmetic)
+                {
+                    Mii = M[i][i];
+                    Mij = M[i][j];
+                    Mji = M[j][i];
+                    Mjj = M[j][j];
 
+                    sum_num = Mji + Mij;
+                    sum_denom = Mjj - Mii;
+                    diff_num = Mji - Mij;
+                    diff_denom = Mjj + Mii;
+
+                    sum_quot = sum_num / sum_denom;
+                    diff_quot = diff_num / diff_denom;
+
+                    theta_sum = aprx_atan2_float(sum_quot);
+                    theta_diff = aprx_atan2_float(diff_quot);
+
+                    theta_l = (theta_sum - theta_diff) / 2;
+                    theta_r = (theta_sum + theta_diff) / 2;
+
+                    U_mod[i][i] = cos(theta_l);
+                    U_mod[i][j] = -sin(theta_l);
+                    U_mod[j][i] = sin(theta_l);
+                    U_mod[j][j] = cos(theta_l);
+
+                    V_mod[i][i] = cos(theta_r);
+                    V_mod[i][j] = -sin(theta_r);
+                    V_mod[j][i] = sin(theta_r);
+                    V_mod[j][j] = cos(theta_r);
+
+                    /*
+                    U_mod[i][i] = lookup_cos(theta_l);
+                    U_mod[i][j] = -lookup_sin(theta_l);
+                    U_mod[j][i] = lookup_sin(theta_l);
+                    U_mod[j][j] = lookup_cos(theta_l);
+
+                    V_mod[i][i] = lookup_cos(theta_r);
+                    V_mod[i][j] = -lookup_sin(theta_r);
+                    V_mod[j][i] = lookup_sin(theta_r);
+                    V_mod[j][j] = lookup_cos(theta_r);
+                    */
+
+                    transpose(*U_mod_T, U_mod);
+                    transpose(*V_mod_T, V_mod);
+
+                    copy(*temp, U);
+                    zero(*U);
+                    multiply(*U, temp, U_mod_T);
+
+                    copy(*temp, V);
+                    zero(*V);
+                    multiply(*V, temp, V_mod_T);
+
+                    zero(*temp);
+                    multiply(*temp, U_mod, M);
+
+                    zero(*M);
+                    multiply(*M, temp, V_mod_T);
+
+                    zero(*U_mod);
+                    zero(*V_mod);
+
+                    U_mod[0][0] = 1;
+                    U_mod[1][1] = 1;
+                    U_mod[2][2] = 1;
+                    U_mod[3][3] = 1;
+
+                    V_mod[0][0] = 1;
+                    V_mod[1][1] = 1;
+                    V_mod[2][2] = 1;
+                    V_mod[3][3] = 1;
+                }
+
+
+                //fixed-point operations
                 Mii_32 = M_32[i][i];
                 Mij_32 = M_32[i][j];
                 Mji_32 = M_32[j][i];
                 Mjj_32 = M_32[j][j];
-
-
-                sum_num = Mji + Mij;
-                sum_denom = Mjj - Mii;
-                diff_num = Mji - Mij;
-                diff_denom = Mjj + Mii;
 
                 sum_num_32 = Mji_32 + Mij_32;
                 sum_denom_32 = Mjj_32 - Mii_32;
                 diff_num_32 = Mji_32 - Mij_32;
                 diff_denom_32 = Mjj_32 + Mii_32;
 
-
-                sum_quot = sum_num / sum_denom;
-                diff_quot = diff_num / diff_denom;
-
-                //sum_quot_32 = (sum_num_32) / (sum_denom_32 >> 20);
-                //diff_quot_32 = diff_num_32 / (diff_denom_32 >> 20);
                 sum_quot_32 = (fixed_t)((((dw_fixed_t)(sum_num_32) << 31) / sum_denom_32) >> 11);
                 diff_quot_32 = (fixed_t)((((dw_fixed_t)(diff_num_32) << 31) / diff_denom_32) >> 11);
-
-
-                theta_sum = aprx_atan2_float(sum_quot);
-                theta_diff = aprx_atan2_float(diff_quot);
 
                 theta_sum_32 = aprx_atan2(sum_quot_32);
                 theta_diff_32 = aprx_atan2(diff_quot_32);
 
-
-                theta_l = (theta_sum - theta_diff) / 2;
-                theta_r = (theta_sum + theta_diff) / 2;
-
                 theta_l_32 = (theta_sum_32 - theta_diff_32) >> 1;
                 theta_r_32 = (theta_sum_32 + theta_diff_32) >> 1;
-
-
-                U_mod[i][i] = cos(theta_l);
-                U_mod[i][j] = -sin(theta_l);
-                U_mod[j][i] = sin(theta_l);
-                U_mod[j][j] = cos(theta_l);
-
-                V_mod[i][i] = cos(theta_r);
-                V_mod[i][j] = -sin(theta_r);
-                V_mod[j][i] = sin(theta_r);
-                V_mod[j][j] = cos(theta_r);
 
                 cos_l = lookup_cos_32(theta_l_32);
                 sin_l = lookup_sin_32(theta_l_32);
@@ -704,52 +742,6 @@ int main()
                 V_mod_32[j][i] = sin_r;
                 V_mod_32[j][j] = cos_r;
 
-                /*
-                 U_mod[i][i] = lookup_cos(theta_l);
-                 U_mod[i][j] = -lookup_sin(theta_l);
-                 U_mod[j][i] = lookup_sin(theta_l);
-                 U_mod[j][j] = lookup_cos(theta_l);
-
-                 V_mod[i][i] = lookup_cos(theta_r);
-                 V_mod[i][j] = -lookup_sin(theta_r);
-                 V_mod[j][i] = lookup_sin(theta_r);
-                 V_mod[j][j] = lookup_cos(theta_r);
-                 */
-
-
-                //normal operations
-                transpose(*U_mod_T, U_mod);
-                transpose(*V_mod_T, V_mod);
-
-                copy(*temp, U);
-                zero(*U);
-                multiply(*U, temp, U_mod_T);
-
-                copy(*temp, V);
-                zero(*V);
-                multiply(*V, temp, V_mod_T);
-
-                zero(*temp);
-                multiply(*temp, U_mod, M);
-
-                zero(*M);
-                multiply(*M, temp, V_mod_T);
-
-                zero(*U_mod);
-                zero(*V_mod);
-
-                U_mod[0][0] = 1;
-                U_mod[1][1] = 1;
-                U_mod[2][2] = 1;
-                U_mod[3][3] = 1;
-
-                V_mod[0][0] = 1;
-                V_mod[1][1] = 1;
-                V_mod[2][2] = 1;
-                V_mod[3][3] = 1;
-
-
-                //fixed point operations
                 transpose_32(*U_mod_T_32, U_mod_32);
                 transpose_32(*V_mod_T_32, V_mod_32);
 
@@ -781,6 +773,7 @@ int main()
                 V_mod_32[3][3] = 1048576;
 
 
+                //debugging printf statements
                 if (Mkk)
                 {
                     printf("M[i][i] = %f\n", Mii);
@@ -941,9 +934,14 @@ int main()
         }
     }
 
-    printf("End:\n\nM:\n");
-    print4f(M);
-    printf("\n\n");
+    printf("End\n\n");
+
+    if (floating_arithmetic)
+    {
+        printf("M:\n");
+        print4f(M);
+        printf("\n\n");
+    }
 
     printf("M_32:\n");
     print4i(M_32);
@@ -961,11 +959,10 @@ int main()
     print4f(M);
     printf("\n\n");
 
-    /*
     gettimeofday(&end, NULL);
     double time_taken = (end.tv_sec * 1 + (end.tv_usec) / 1 ) - (start.tv_sec * 1 + (start.tv_usec) / 1 ); // in seconds
     printf("time program took %d microseconds to execute\n", (int)time_taken);
-    */
+
 
     return 0;
 }
