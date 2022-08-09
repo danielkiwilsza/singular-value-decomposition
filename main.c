@@ -42,6 +42,8 @@
 #define invfact5fix 546
 //#define inv3 0.3333333333333333f
 
+#define FIXED_2_X_PI 6588397
+
 
 float lookup_cos_float[128] = {
 
@@ -177,16 +179,16 @@ float wrap2pi_float(float angle)
 
 fixed_t wrap2pi_32(fixed_t angle)
 {
-    fixed_t twopi_32 = 6588397;
-
-    if (angle < 0)
+    //fixed_t twopi_32 = 6588397;
+    /*if (angle < 0)
     {
-        return angle - twopi_32 * ((angle / twopi_32) - 1);
+        return angle - FIXED_2_X_PI * ((angle / FIXED_2_X_PI) - 1);
     }
     else
     {
-        return angle - twopi_32 * (angle / twopi_32);
-    }
+        return angle - FIXED_2_X_PI * (angle / FIXED_2_X_PI);
+    }*/
+    return angle - FIXED_2_X_PI * ((angle / FIXED_2_X_PI) - (angle < 0));
 }
 
 int lookupindex(float angle)
@@ -308,6 +310,11 @@ fixed_t aprx_atan2(fixed_t x)
     {
         return aprx_atan(x);
     }
+    else
+    {
+        return (x > 1048576 ? 1647099 : -1647099) - aprx_atan(x_reciprocal);
+    }
+    /*
     else if (x > 1048576)
     {
 
@@ -316,7 +323,7 @@ fixed_t aprx_atan2(fixed_t x)
     else
     {
         return -1647099 - aprx_atan(x_reciprocal);
-    }
+    }*/
 }
 
 /*float aprx_cot_float(float x) {
