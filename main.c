@@ -363,9 +363,13 @@ float aprx_sin2(float x) {
     printf("Gave sin wrap to %.4f\n", x);
     float a = wrap2pi_float(x);
     printf("Sin wrap to %.4f\n", a);
+<<<<<<< HEAD
     printf("Actual: %.4f\n", sin(a));
     if(a < 3.141592f / 2.0f) {
         printf("Approx: %.4f\n", aprx_sin(a));
+=======
+    if(a < 3.141592f * 0.5f) {
+>>>>>>> 2654e51c71cf063e0344f65de59f206f3c3d7d6d
         return aprx_sin(a);
     }
     else if(a < 3.141592f) {
@@ -623,6 +627,7 @@ int main()
                 V_mod[j][j] = cos(theta_r);*/
                 
                 
+<<<<<<< HEAD
                 U_mod[i][i] = aprx_cos2(theta_l);
                 U_mod[i][j] = -aprx_sin2(theta_l);
                 U_mod[j][i] = aprx_sin2(theta_l);
@@ -632,6 +637,17 @@ int main()
                 V_mod[i][j] = -aprx_sin2(theta_r);
                 V_mod[j][i] = aprx_sin2(theta_r);
                 V_mod[j][j] = aprx_cos2(theta_r);
+=======
+                U_mod[i][i] = lookup_cos(theta_l);
+                U_mod[i][j] = -aprx_sin2(theta_l);
+                U_mod[j][i] = aprx_sin2(theta_l);
+                U_mod[j][j] = lookup_cos(theta_l);
+
+                V_mod[i][i] = lookup_cos(theta_r);
+                V_mod[i][j] = -aprx_sin2(theta_r);
+                V_mod[j][i] = aprx_sin2(theta_r);
+                V_mod[j][j] = lookup_cos(theta_r);
+>>>>>>> 2654e51c71cf063e0344f65de59f206f3c3d7d6d
 
                 transpose(*U_mod_T, U_mod);
                 transpose(*V_mod_T, V_mod);
