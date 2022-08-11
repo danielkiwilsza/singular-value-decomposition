@@ -5,6 +5,7 @@
 
 //for debugging
 #define debug 0
+#define debug_M_iterations 0
 #define debug_matrices 0
 
 //prints a 2x2 matrix with floating-point numbers
@@ -255,7 +256,7 @@ int main()
                 }
 
                 //for displaying M each iteration
-                if (debug_matrices)
+                if (debug_M_iterations)
                 {
                     printf("M:\n");
                     print4f(M);
