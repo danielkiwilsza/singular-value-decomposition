@@ -98,7 +98,8 @@ int main()
     gettimeofday(&start, NULL);
 
     //initialize matrices
-    float M[4][4] = {{31, 77, -11, 26}, {-42, 14, 79, -53}, {-68, -10, 45, 90}, {34, 16, 38, -19}};
+    float M[4][4] = {{31, 77, -11, 26}, {-42, 14, 79, -53}, {-68, -10, 45, 90},
+                     {34, 16, 38, -19}};
     float U[4][4] = {{1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
     float V[4][4] = {{1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
 
@@ -129,10 +130,14 @@ int main()
     float diff_num;
     float diff_denom;
 
-    //print out starting matrix
-    printf("Start\n\nM:\n");
-    print4f(M);
-    printf("\n\n");
+    if (debug_matrices)
+    {
+        //print out starting matrix
+        printf("Start\n\nM:\n");
+        print4f(M);
+        printf("\n\n");
+    }
+
 
     //main program
     for (unsigned int sweep = 1; sweep < 5; sweep++)
@@ -142,7 +147,10 @@ int main()
         {
             for (unsigned int j = i+1; j < 4; j++)
             {
-                printf("Sweep %d, Pair (%d - %d)\n\n", sweep, i+1, j+1);
+                if (debug_matrices)
+                {
+                    printf("Sweep %d, Pair (%d - %d)\n\n", sweep, i+1, j+1);
+                }
 
                 Mii = M[i][i];
                 Mij = M[i][j];
@@ -246,10 +254,13 @@ int main()
                     print4f(V);
                 }
 
-                //print M each iteration
-                printf("M:\n");
-                print4f(M);
-                printf("\n\n");
+                //for displaying M each iteration
+                if (debug_matrices)
+                {
+                    printf("M:\n");
+                    print4f(M);
+                    printf("\n\n");
+                }
             }
         }
     }
@@ -257,7 +268,8 @@ int main()
     //measure time elapsed in microseconds
     gettimeofday(&end, NULL);
     double time_taken = (end.tv_sec + end.tv_usec) - (start.tv_sec + start.tv_usec);
-    printf("Program took %f milliseconds to execute\n", time_taken);
+    printf("Program took %f microseconds to execute\n", time_taken);
 
     return 0;
 }
+
