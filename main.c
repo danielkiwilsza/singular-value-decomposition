@@ -3,6 +3,10 @@
 #include <unistd.h>
 #include <sys/time.h>
 
+//for debugging
+#define debug 0
+#define debug_matrices 0
+
 //prints a 2x2 matrix with floating-point numbers
 void print2f(float temp[2][2])
 {
@@ -116,6 +120,10 @@ int main()
     float theta_r;
 
     //matrix index operations
+    float Mii;
+    float Mij;
+    float Mji;
+    float Mjj;
     float sum_num;
     float sum_denom;
     float diff_num;
@@ -136,10 +144,15 @@ int main()
             {
                 printf("Sweep %d, Pair (%d - %d)\n\n", sweep, i+1, j+1);
 
-                sum_num = M[j][i] + M[i][j];
-                sum_denom = M[j][j] - M[i][i];
-                diff_num = M[j][i] - M[i][j];
-                diff_denom = M[j][j] + M[i][i];
+                Mii = M[i][i];
+                Mij = M[i][j];
+                Mji = M[j][i];
+                Mjj = M[j][j];
+
+                sum_num = Mji + Mij;
+                sum_denom = Mjj - Mii;
+                diff_num = Mji - Mij;
+                diff_denom = Mjj + Mii;
 
                 theta_sum = atan(sum_num / sum_denom);
                 theta_diff = atan(diff_num / diff_denom);
@@ -189,11 +202,54 @@ int main()
                 V_mod[2][2] = 1;
                 V_mod[3][3] = 1;
 
+                //for displaying intermediate steps
+                if (debug)
+                {
+                    printf("M[i][i] = %f\n", Mii);
+                    printf("M[i][j] = %f\n", Mij);
+                    printf("M[j][i] = %f\n", Mji);
+                    printf("M[j][j] = %f\n", Mjj);
+                    printf("\n");
+
+                    printf("sum_num =       M[j][i] + M[i][j] =     %f\n", sum_num);
+                    printf("sum_denom =     M[j][j] - M[i][i] =     %f\n", sum_denom);
+                    printf("diff_num =      M[j][i] - M[i][j] =     %f\n", diff_num);
+                    printf("diff_denom =    M[j][j] + M[i][i] =     %f\n", diff_denom);
+                    printf("\n");
+
+                    printf("sum_quot =      sum_num / sum_denom =       %f\n", sum_num / sum_denom);
+                    printf("diff_quot =     diff_num / diff_denom =     %f\n", diff_num / diff_denom);
+                    printf("\n");
+
+                    printf("theta_sum =     atan(sum_quot) =        %f\n", theta_sum);
+                    printf("theta_diff =    atan(diff_quot) =       %f\n", theta_diff);
+                    printf("\n");
+
+                    printf("theta_l =       (theta_sum - theta_diff) / 2 =    %f\n", theta_l);
+                    printf("theta_r =       (theta_sum + theta_diff) / 2 =    %f\n", theta_r);
+                    printf("\n");
+
+                    printf("cos(theta_l): %f\n", cos(theta_l));
+                    printf("sin(theta_l): %f\n", sin(theta_l));
+                    printf("cos(theta_r): %f\n", cos(theta_r));
+                    printf("sin(theta_r): %f\n", sin(theta_r));
+                    printf("\n");
+                }
+
+                //for displaying the matrices U and V each iteration
+                if (debug_matrices)
+                {
+                    printf("U:\n");
+                    print4f(U);
+
+                    printf("V:\n");
+                    print4f(V);
+                }
+
                 //print M each iteration
                 printf("M:\n");
                 print4f(M);
                 printf("\n\n");
-
             }
         }
     }
