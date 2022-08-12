@@ -7,15 +7,16 @@
 #include <stdlib.h>
 #include <string.h>
 
-//control if floating-point arithmetic is run
+//Control if floating-point arithmetic is run.
 #define floating_arithmetic 0
-#define floating_uses_trig_approximations 1
+#define floating_uses_trig_approximations 0
 
-//general debugging
-#define debug_matrices 0
+//General debugging.
+#define debug_start_end 0
 #define debug_iterations 0
+#define debug_matrices 0
 
-//individual debugging
+//Individual debugging.
 #define Mkk 0
 #define num_denom 0
 #define quot 0
@@ -26,25 +27,28 @@
 #define cos_sin_LR 0
 #define lookup_cos_sin 0
 
+//Scale factor: 2^(FIXED_FRACTIONAL_PART).
 #define FIXED_FRACTIONAL_PART 20
 
+//Values for Taylor series expansions.
 #define invfact2 0.5f
 #define invfact3 0.16666666666666666f
 #define invfact4 0.04166666666666666f
 #define invfact5 0.00833333333333333f
-#define invfact6 0.00138888888888888f
-#define invfact7 0.00019841269841269f
-#define invfact8 2.48015873015873e-05f
 
 #define invfact2fix 32768
 #define invfact3fix 10922
 #define invfact4fix 2730
 #define invfact5fix 546
-//#define inv3 0.3333333333333333f
 
 #define FIXED_2_X_PI 6588397
 
+//BARR-C 5.1: Names of new data types must consist of only lowercase letters and end with '_t'.
+//BARR-C 5.2: Fixed-width integer data types are used instead of int and long long int.
+typedef int32_t fixed_t;
+typedef int64_t dw_fixed_t;
 
+//Lookup table for cos using float values.
 float lookup_cos_float[128] = {
 
         1.000000f,     0.998795f,     0.995185f,     0.989177f,     0.980785f,
@@ -75,6 +79,7 @@ float lookup_cos_float[128] = {
         0.989177f,     0.995185f,     0.998795f
 };
 
+//Lookup table for sin using float values.
 float lookup_sin_float[128] = {
 
         0.000000f,     0.049068f,     0.098017f,     0.146730f,     0.195090f,
@@ -105,8 +110,8 @@ float lookup_sin_float[128] = {
         -0.146730f,    -0.098017f,    -0.049068f
 };
 
-//scale factor: 2^20
-int lookup_cos_32_inter[128] = {
+//Lookup table for cos using fixed-point values.
+fixed_t lookup_cos_32_inter[128] = {
 
         1048576,      1047313,      1043527,      1037227,      1028428,
         1017151,      1003425,       987281,       968758,       947901,
@@ -136,8 +141,8 @@ int lookup_cos_32_inter[128] = {
         1037227,      1043527,      1047313
 };
 
-//scale factor: 2^20
-int lookup_sin_32_inter[128] = {
+//Lookup table for sin using fixed-point values.
+fixed_t lookup_sin_32_inter[128] = {
 
         0,        51451,       102778,       153858,       204567,
         254783,       304386,       353255,       401273,       448324,
@@ -167,31 +172,44 @@ int lookup_sin_32_inter[128] = {
         -153858,      -102778,       -51451
 };
 
+//Converts fixed-point numbers into floats.
+//BARR-C 1.3: Braces always surround blocks of code.
+static float fix2float(fixed_t in)
+{
+    return ((float) in / (float) (1 << FIXED_FRACTIONAL_PART));
+}
 
-typedef int32_t fixed_t;
-typedef int64_t dw_fixed_t;
+//Converts floats into fixed-point numbers.
+//BARR-C 1.8: Use the static keyword for functions.
+static fixed_t float2fix(float in)
+{
+    return (fixed_t) (in * (1 << FIXED_FRACTIONAL_PART));
+}
 
-float wrap2pi_float(float angle)
+//Multiplies two fixed-point numbers.
+static fixed_t fixed_multiply(fixed_t a, fixed_t b)
+{
+    //Return 32-bit signed integer since 32-bit operands are used (implementation-defined).
+    //BARR-C 1.6: Each cast shall be explained.
+    return ((dw_fixed_t) a * (dw_fixed_t) b) >> FIXED_FRACTIONAL_PART;
+}
+
+//Wraps a float angle to a value between 0 and pi.
+static float wrap2pi_float(float angle)
 {
     float twopi = 2.0f * 3.141592f;
     return angle - twopi * floor ( angle / twopi);
 }
 
-fixed_t wrap2pi_32(fixed_t angle)
+//Wraps a fixed-point angle to a value between 0 and pi.
+static fixed_t wrap2pi_32(fixed_t angle)
 {
-    //fixed_t twopi_32 = 6588397;
-    /*if (angle < 0)
-    {
-        return angle - FIXED_2_X_PI * ((angle / FIXED_2_X_PI) - 1);
-    }
-    else
-    {
-        return angle - FIXED_2_X_PI * (angle / FIXED_2_X_PI);
-    }*/
+    //Prevents branching by including the condition in the return statement.
     return angle - FIXED_2_X_PI * ((angle / FIXED_2_X_PI) - (angle < 0));
 }
 
-int lookupindex(float angle)
+//Calculates the lookup table index from a float angle.
+static int lookupindex(float angle)
 {
     float a = wrap2pi_float(angle);
     float b = 3.141592f / 64.0f;
@@ -199,59 +217,50 @@ int lookupindex(float angle)
     return index;
 }
 
-fixed_t lookupindex_32(fixed_t angle)
+//Calculates the lookup table index from a fixed-point angle.
+static fixed_t lookupindex_32(fixed_t angle)
 {
     fixed_t a = wrap2pi_32(angle);
 
+    //This is equal to pi / 64.
     fixed_t b = 51472;
     int index = (a / b);
     return index;
 }
 
-float lookup_cos(float angle)
+//Returns a value from the cos lookup table given a float angle.
+static float lookup_cos(float angle)
 {
     return lookup_cos_float[lookupindex(angle)];
 }
 
-float lookup_sin(float angle)
+//Returns a value from the sin lookup table given a float angle.
+static float lookup_sin(float angle)
 {
     return lookup_sin_float[lookupindex(angle)];
 }
 
-fixed_t lookup_cos_32(fixed_t angle)
+//Returns a value from the cos lookup table given a fixed-point angle.
+static fixed_t lookup_cos_32(fixed_t angle)
 {
     return lookup_cos_32_inter[lookupindex_32(angle)];
 }
 
-fixed_t lookup_sin_32(fixed_t angle)
+//Returns a value from the sin lookup table given a fixed-point angle.
+static fixed_t lookup_sin_32(fixed_t angle)
 {
     return lookup_sin_32_inter[lookupindex_32(angle)];
 }
 
-float fix2float(fixed_t in)
+//Approximates atan using a piecewise linear function, given a float angle in the range [-1,1].
+static float aprx_atan_float(float a)
 {
-    return ((float) in / (float) (1 << FIXED_FRACTIONAL_PART));
-}
-
-fixed_t float2fix(float in)
-{
-    return (fixed_t) (in * (1 << FIXED_FRACTIONAL_PART));
-}
-
-fixed_t fixed_multiply(fixed_t a, fixed_t b)
-{
-    //return ((dw_fixed_t) a * (dw_fixed_t) b) / (1 << 16);
-
-    return ((dw_fixed_t) a * (dw_fixed_t) b) >> FIXED_FRACTIONAL_PART;
-}
-
-float aprx_atan_float(float a)
-{
-    if(a > 0.5f && a <= 1.0f)
+    //BARR-C 1.4: Do not rely on operator precedence rules; use parentheses.
+    if((a > 0.5f) && (a <= 1.0f))
     {
         return 0.644f * a + 0.142f;
     }
-    else if (a >= -0.5f && a <= 0.5f)
+    else if ((a >= -0.5f) && (a <= 0.5f))
     {
         return 0.928f * a;
     }
@@ -261,7 +270,8 @@ float aprx_atan_float(float a)
     }
 }
 
-float aprx_atan2_float(float x)
+//Uses a trig identity to allow use of the aprx_atan_float function with any angle value.
+static float aprx_atan2_float(float x)
 {
     if(abs(x) <= 1.0f)
     {
@@ -277,33 +287,27 @@ float aprx_atan2_float(float x)
     }
 }
 
-fixed_t aprx_atan(fixed_t a)
+//Approximates atan using a piecewise linear function, given a fixed-point angle in the range [-1,1].
+static fixed_t aprx_atan(fixed_t a)
 {
     if(a > 524288 && a <= 1048576)
     {
-        //return (fixed_t)(((675283 * (dw_fixed_t)(a)) >> 20) + 148898);
-
         return fixed_multiply(675283, a) + 148898;
     }
     else if (a >= -524288 && a <= 524288)
     {
-        //return (fixed_t)((973079 * (dw_fixed_t)(a)) >> 20);
-
         return fixed_multiply(973079, a);
     }
     else
     {
-        //return (fixed_t)(((675283 * (dw_fixed_t)(a)) >> 20) - 148898);
-
         return fixed_multiply(675283, a) - 148898;
     }
 }
 
-fixed_t aprx_atan2(fixed_t x)
+//Uses a trig identity to allow use of the aprx_atan function with any (fixed-point) angle value.
+static fixed_t aprx_atan2(fixed_t x)
 {
-    //fixed_t x_reciprocal = (fixed_t)((((dw_fixed_t)(1) << 63) / x) >> 23);
-    //couldn't use cuz sign was being lost, not sure how
-
+    //Divide 64-bit value by a 32-value for maximum precision, convert back to 32-bit.
     fixed_t x_reciprocal = (fixed_t)((((dw_fixed_t)(1) << 62) / x) >> 22);
 
     if(abs(x) <= 1048576)
@@ -312,76 +316,42 @@ fixed_t aprx_atan2(fixed_t x)
     }
     else
     {
+        //Eliminates extra if/else statements by using a ternary operator.
         return (x > 1048576 ? 1647099 : -1647099) - aprx_atan(x_reciprocal);
     }
-    /*
-    else if (x > 1048576)
-    {
-
-        return 1647099 - aprx_atan(x_reciprocal);
-    }
-    else
-    {
-        return -1647099 - aprx_atan(x_reciprocal);
-    }*/
 }
 
-/*float aprx_cot_float(float x) {
-    if(x > 1 && x <= 1.77) {
-        return -0.347 * x + 1.12;
-    }
-    else if (x > 1.77 && x <= 3.307) {
-        return -0.138 * x + 0.75;
-    }
-    else if (x >
-
-
-    }
-}*/
-
-float taylor_sin(float x) {
+//Approximates sin with a Taylor series expansion given a float angle.
+static float taylor_sin(float x)
+{
     return x - (x * x * x) * invfact3 + (x * x * x * x * x) * invfact5;
 }
 
-float taylor_cos(float x) {
+//Approximates cos with a Taylor series expansion given a float angle.
+static float taylor_cos(float x)
+{
     return 1.0f - (x * x) * invfact2 + (x * x * x * x) * invfact4;
 }
 
-fixed_t taylor_sin_fix(fixed_t x) {
+//Approximates sin with a Taylor series expansion given a fixed-point angle.
+static fixed_t taylor_sin_fix(fixed_t x)
+{
     fixed_t x2 = fixed_multiply(x, x);
     fixed_t x3 = fixed_multiply(x2, x);
     fixed_t x5 = fixed_multiply(x3, x2);
     return x - x3 * invfact3fix + x5 * invfact5fix;
 }
 
-fixed_t taylor_cos_fix(fixed_t x) {
+//Approximates cos with a Taylor series expansion given a fixed-point angle.
+static fixed_t taylor_cos_fix(fixed_t x)
+{
     fixed_t x2 = fixed_multiply(x, x);
     fixed_t x4 = fixed_multiply(x2, x2);
     return float2fix(1.0f) - x2 * invfact2fix + x4 * invfact4fix;
 }
 
-/*float taylor_atan(float x) {
-    return x - (x * x * x)
-}*/
-
-//prints a 2x2 matrix with floating-point numbers
-void print2f(float temp[2][2])
-{
-    for (unsigned int i = 0; i < 2; i++)
-    {
-        for (unsigned int j = 0; j < 2; j++)
-        {
-            printf("%12f ", temp[i][j]);
-        }
-
-        printf("\n");
-    }
-
-    printf("\n");
-}
-
-//prints a 4x4 matrix with floating-point numbers
-void print4f(float temp[4][4])
+//Prints a 4x4 matrix with float elements.
+static void print4f(float temp[4][4])
 {
     for (unsigned int i = 0; i < 4; i++)
     {
@@ -396,8 +366,8 @@ void print4f(float temp[4][4])
     printf("\n");
 }
 
-//prints a 4x4 matrix with integers
-void print4i(int temp[4][4])
+//Prints a 4x4 matrix with fixed-point elements.
+static void print4i(int temp[4][4])
 {
     for (unsigned int i = 0; i < 4; i++)
     {
@@ -412,8 +382,21 @@ void print4i(int temp[4][4])
     printf("\n");
 }
 
-//transposes a matrix
-void transpose(float* restrict p, float mat[4][4])
+//Transposes a matrix with float elements.
+static void transpose(float* restrict p, float mat[4][4])
+{
+    for (unsigned int i = 0; i < 4; i++)
+    {
+        //Demonstration of loop unrolling.
+        *(p + i * 4 + 0) = mat[0][i];
+        *(p + i * 4 + 1) = mat[1][i];
+        *(p + i * 4 + 2) = mat[2][i];
+        *(p + i * 4 + 3) = mat[3][i];
+    }
+}
+
+//Transposes a matrix with fixed-point elements.
+static void transpose_32(fixed_t* restrict p, fixed_t mat[4][4])
 {
     for (unsigned int i = 0; i < 4; i++)
     {
@@ -424,19 +407,8 @@ void transpose(float* restrict p, float mat[4][4])
     }
 }
 
-void transpose_32(fixed_t* restrict p, fixed_t mat[4][4])
-{
-    for (unsigned int i = 0; i < 4; i++)
-    {
-        *(p + i * 4 + 0) = mat[0][i];
-        *(p + i * 4 + 1) = mat[1][i];
-        *(p + i * 4 + 2) = mat[2][i];
-        *(p + i * 4 + 3) = mat[3][i];
-    }
-}
-
-//performs matrix multiplication
-void multiply(float* restrict p, float temp1[4][4], float temp2[4][4])
+//Performs matrix multiplication with matrices that have float elements.
+static void multiply(float* restrict p, float mat1[4][4], float mat2[4][4])
 {
     for (unsigned int i = 0; i < 4; i++)
     {
@@ -444,13 +416,14 @@ void multiply(float* restrict p, float temp1[4][4], float temp2[4][4])
         {
             for (unsigned int k = 0; k < 4; k++)
             {
-                *(p + i * 4 + j) += temp1[i][k] * temp2[k][j];
+                *(p + i * 4 + j) += mat1[i][k] * mat2[k][j];
             }
         }
     }
 }
 
-void multiply_32(fixed_t* restrict p, fixed_t temp1[4][4], fixed_t temp2[4][4])
+//Performs matrix multiplication with matrices that have fixed-point elements.
+static void multiply_32(fixed_t* restrict p, fixed_t mat1[4][4], fixed_t mat2[4][4])
 {
     for (unsigned int i = 0; i < 4; i++)
     {
@@ -458,149 +431,113 @@ void multiply_32(fixed_t* restrict p, fixed_t temp1[4][4], fixed_t temp2[4][4])
         {
             for (unsigned int k = 0; k < 4; k++)
             {
-                //*(p + i * 4 + j) += (fixed_t)((dw_fixed_t)(temp1[i][k] * (dw_fixed_t)(temp2[k][j])) >> 20);
-
-                *(p + i * 4 + j) += fixed_multiply(temp1[i][k], temp2[k][j]);
+                *(p + i * 4 + j) += fixed_multiply(mat1[i][k], mat2[k][j]);
             }
         }
     }
 }
 
-//sets all matrix indices to 0
-void zero(float* restrict p)
+//Sets all elements in a float matrix to zero.
+static void zero(float* restrict p)
 {
-    //memset(p, 0, sizeof(float) * 16);
-
-    for (unsigned int i = 0; i < 4; i++)
-    {
-        *(p + i * 4 + 0) = 0;
-        *(p + i * 4 + 1) = 0;
-        *(p + i * 4 + 2) = 0;
-        *(p + i * 4 + 3) = 0;
-    }
-
+    //Memset is used in place of a double for loop.
+    memset(p, 0, sizeof(float) * 16);
 }
 
-void zero_32(fixed_t* restrict p)
+//Sets all elements in a fixed-point matrix to zero.
+static void zero_32(fixed_t* restrict p)
 {
-    //memset(p, 0, sizeof(fixed_t) * 16);
-
-    for (unsigned int i = 0; i < 4; i++)
-    {
-        *(p + i * 4 + 0) = 0;
-        *(p + i * 4 + 1) = 0;
-        *(p + i * 4 + 2) = 0;
-        *(p + i * 4 + 3) = 0;
-    }
-
+    memset(p, 0, sizeof(fixed_t) * 16);
 }
 
-//copies a matrix into another matrix
-void copy(float* restrict p, float mat[4][4])
+//Copies a float matrix into another float matrix.
+static void copy(float* restrict p, float mat[4][4])
 {
-    //memcpy(p, mat, sizeof(float) * 16);
-
-    for (unsigned int i = 0; i < 4; i++)
-    {
-        for (unsigned int j = 0; j < 4; j++)
-        {
-            *(p + i * 4 + j) = mat[i][j];
-        }
-    }
-
+    //Memcpy is used in place of a double for loop.
+    memcpy(p, mat, sizeof(float) * 16);
 }
 
-void copy_32(fixed_t* restrict p, fixed_t mat[4][4])
+//Copies a fixed-point matrix into another fixed-point matrix.
+static void copy_32(fixed_t* restrict p, fixed_t mat[4][4])
 {
-    //memcpy(p, mat, sizeof(fixed_t) * 16);
-
-    for (unsigned int i = 0; i < 4; i++)
-    {
-        for (unsigned int j = 0; j < 4; j++)
-        {
-            *(p + i * 4 + j) = mat[i][j];
-        }
-    }
-
-}
-
-int testfunc() {
-    fixed_t inv2 = float2fix(invfact2);
-    fixed_t inv3 = float2fix(invfact3);
-    fixed_t inv4 = float2fix(invfact4);
-    fixed_t inv5 = float2fix(invfact5);
-    fixed_t inv6 = float2fix(invfact6);
-    fixed_t inv7 = float2fix(invfact7);
-    fixed_t inv8 = float2fix(invfact8);
-    fixed_t thrity = float2fix(30.0f);
-    printf( " Fix: %d\n" , inv2 );
-    printf( " Fix: %d\n" , inv3);
-    printf( " Fix: %d\n" , inv4 );
-    printf( " Fix: %d\n" , inv5 );
-    printf( " Fix: %d\n" , inv6 );
-    printf( " Fix: %d\n" , inv7 );
-    printf( " Fix: %d\n" , inv8 );
-    printf( " Fix: %d\n" , thrity );
-    //float flt = fix2float(fix);
-    //printf(" Float: %f\n", flt);
+    memcpy(p, mat, sizeof(fixed_t) * 16);
 }
 
 int main()
 {
+    //Start measuring time elapsed.
     struct timeval start, end;
     gettimeofday(&start, NULL);
 
-    //initialize matrices
+    //Initialize float matrices.
     float M[4][4] = {{31, 77, -11, 26}, {-42, 14, 79, -53}, {-68, -10, 45, 90}, {34, 16, 38, -19}};
     float U[4][4] = {{1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
     float V[4][4] = {{1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
 
-    fixed_t M_32[4][4];                                                                                                     //scale factor: 2^31 / 2^11 = 2^20
-    fixed_t U_32[4][4] = {{(1 << FIXED_FRACTIONAL_PART), 0, 0, 0}, {0, (1 << FIXED_FRACTIONAL_PART), 0, 0}, {0, 0, (1 << FIXED_FRACTIONAL_PART), 0}, {0, 0, 0, (1 << FIXED_FRACTIONAL_PART)}};                  //scale factor: 2^20
-    fixed_t V_32[4][4] = {{(1 << FIXED_FRACTIONAL_PART), 0, 0, 0}, {0, (1 << FIXED_FRACTIONAL_PART), 0, 0}, {0, 0, (1 << FIXED_FRACTIONAL_PART), 0}, {0, 0, 0, (1 << FIXED_FRACTIONAL_PART)}};	            //scale factor: 2^20
+    //Initialize fixed-point matrices.
+    fixed_t M_32[4][4];
+    fixed_t U_32[4][4] = {{(1 << FIXED_FRACTIONAL_PART), 0, 0, 0},
+                          {0, (1 << FIXED_FRACTIONAL_PART), 0, 0},
+                          {0, 0, (1 << FIXED_FRACTIONAL_PART), 0},
+                          {0, 0, 0, (1 << FIXED_FRACTIONAL_PART)}};
+    fixed_t V_32[4][4] = {{(1 << FIXED_FRACTIONAL_PART), 0, 0, 0},
+                          {0, (1 << FIXED_FRACTIONAL_PART), 0, 0},
+                          {0, 0, (1 << FIXED_FRACTIONAL_PART), 0},
+                          {0, 0, 0, (1 << FIXED_FRACTIONAL_PART)}};
 
-    //modified U and V matrices
+    //Initialize modified (float) U and V matrices.
     float U_mod[4][4] = {{1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
     float V_mod[4][4] = {{1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
 
-    fixed_t U_mod_32[4][4] = {{(1 << FIXED_FRACTIONAL_PART), 0, 0, 0}, {0, (1 << FIXED_FRACTIONAL_PART), 0, 0}, {0, 0, (1 << FIXED_FRACTIONAL_PART), 0}, {0, 0, 0, (1 << FIXED_FRACTIONAL_PART)}};	                //scale factor: 2^20
-    fixed_t V_mod_32[4][4] = {{(1 << FIXED_FRACTIONAL_PART), 0, 0, 0}, {0, (1 << FIXED_FRACTIONAL_PART), 0, 0}, {0, 0, (1 << FIXED_FRACTIONAL_PART), 0}, {0, 0, 0, (1 << FIXED_FRACTIONAL_PART)}};	                //scale factor: 2^20
+    //Initialize modified (fixed-point) U and V matrices.
+    fixed_t U_mod_32[4][4] = {{(1 << FIXED_FRACTIONAL_PART), 0, 0, 0},
+                              {0, (1 << FIXED_FRACTIONAL_PART), 0, 0},
+                              {0, 0, (1 << FIXED_FRACTIONAL_PART), 0},
+                              {0, 0, 0, (1 << FIXED_FRACTIONAL_PART)}};
+    fixed_t V_mod_32[4][4] = {{(1 << FIXED_FRACTIONAL_PART), 0, 0, 0},
+                              {0, (1 << FIXED_FRACTIONAL_PART), 0, 0},
+                              {0, 0, (1 << FIXED_FRACTIONAL_PART), 0},
+                              {0, 0, 0, (1 << FIXED_FRACTIONAL_PART)}};
 
-    //transposes of modified U and V matrices
+    //Initialize transposes of modified (float) U and V matrices.
     float U_mod_T[4][4] = {{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}};
     float V_mod_T[4][4] = {{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}};
 
+    //Initialize transposes of modified (fixed-point) U and V matrices.
     fixed_t U_mod_T_32[4][4] = {{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}};
     fixed_t V_mod_T_32[4][4] = {{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}};
 
-    //temporary matrix
+    //Initialize float temporary matrix.
     float temp[4][4] = {{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}};
 
+    //Initialize fixed-point temporary matrix.
     fixed_t temp_32[4][4] = {{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}};
 
-    //angles
+    //Declare float angles.
     float theta_sum;
     float theta_diff;
     float theta_l;
     float theta_r;
 
+    //Declare fixed-point angles.
     fixed_t theta_sum_32;
     fixed_t theta_diff_32;
     fixed_t theta_l_32;
     fixed_t theta_r_32;
 
-    //matrix indices (use register int later)
+    //Declare float matrix indices.
     float Mii;
     float Mij;
     float Mji;
     float Mjj;
 
-    fixed_t Mii_32;
-    fixed_t Mij_32;
-    fixed_t Mji_32;
-    fixed_t Mjj_32;
+    //Declare fixed-point matrix indices.
+    register fixed_t Mii_32;
+    register fixed_t Mij_32;
+    register fixed_t Mji_32;
+    register fixed_t Mjj_32;
 
-    //matrix index operations
+    //Declare float index operations.
     float sum_num;
     float sum_denom;
     float diff_num;
@@ -608,22 +545,19 @@ int main()
     float sum_quot;
     float diff_quot;
 
+    //Declare fixed-point index operations and rotations.
     fixed_t sum_num_32;
     fixed_t sum_denom_32;
     fixed_t diff_num_32;
     fixed_t diff_denom_32;
     fixed_t sum_quot_32;
     fixed_t diff_quot_32;
-
     fixed_t cos_l;
     fixed_t sin_l;
     fixed_t cos_r;
     fixed_t sin_r;
 
-    printf("Start\n\nM:\n");
-    print4f(M);
-    printf("\n\n");
-
+    //Convert matrix M into fixed-point matrix M_32.
     for (unsigned int i = 0; i < 4; i++)
     {
         for (unsigned int j = 0; j < 4; j++)
@@ -632,14 +566,21 @@ int main()
         }
     }
 
-    printf("Modified, M_32 = round(M_12 * 2^20)\n\nM_32:\n");
-    print4i(M_32);
-    printf("\n\n");
-
-    //main program
-    for (unsigned int sweep = 1; sweep < 30; sweep++)
+    if (debug_start_end)
     {
-        //double for loop for matrix indexing
+        printf("Start\n\nM:\n");
+        print4f(M);
+        printf("\n\n");
+
+        printf("Modified, M_32 = round(M_12 * 2^20)\n\nM_32:\n");
+        print4i(M_32);
+        printf("\n\n");
+    }
+
+    //Outermost loop counts number of sweeps.
+    for (unsigned int sweep = 1; sweep < 10; sweep++)
+    {
+        //Double for loop for cycling through the (i,j) pairs.
         for (unsigned int i = 0; i < 3; i++)
         {
             for (unsigned int j = i+1; j < 4; j++)
@@ -649,7 +590,83 @@ int main()
                     printf("Sweep %d, Pair (%d - %d)\n\n", sweep, i+1, j+1);
                 }
 
-                //floating-point operations
+                //Fixed-point operations.
+                //Store matrix elements in local variables.
+                Mii_32 = M_32[i][i];
+                Mij_32 = M_32[i][j];
+                Mji_32 = M_32[j][i];
+                Mjj_32 = M_32[j][j];
+
+                //Perform intermediate matrix index operations.
+                sum_num_32 = Mji_32 + Mij_32;
+                sum_denom_32 = Mjj_32 - Mii_32;
+                diff_num_32 = Mji_32 - Mij_32;
+                diff_denom_32 = Mjj_32 + Mii_32;
+
+                //Calculate quotients using fixed-point techniques.
+                sum_quot_32 = (fixed_t)((((dw_fixed_t)(sum_num_32) << 31) / sum_denom_32) >> 11);
+                diff_quot_32 = (fixed_t)((((dw_fixed_t)(diff_num_32) << 31) / diff_denom_32) >> 11);
+
+                //Approximate SUM and DIFF angles using piecewise linear approximate for atan.
+                theta_sum_32 = aprx_atan2(sum_quot_32);
+                theta_diff_32 = aprx_atan2(diff_quot_32);
+
+                //Separate left and right rotation angles.
+                theta_l_32 = (theta_sum_32 - theta_diff_32) >> 1;
+                theta_r_32 = (theta_sum_32 + theta_diff_32) >> 1;
+
+                //Approximate cos and sin using lookup tables and store them in local variables.
+                cos_l = lookup_cos_32(theta_l_32);
+                sin_l = lookup_sin_32(theta_l_32);
+                cos_r = lookup_cos_32(theta_r_32);
+                sin_r = lookup_sin_32(theta_r_32);
+
+                //Store plane rotations in modified U and V matrices at corresponding (i,j) elements.
+                U_mod_32[i][i] = cos_l;
+                U_mod_32[i][j] = -sin_l;
+                U_mod_32[j][i] = sin_l;
+                U_mod_32[j][j] = cos_l;
+
+                V_mod_32[i][i] = cos_r;
+                V_mod_32[i][j] = -sin_r;
+                V_mod_32[j][i] = sin_r;
+                V_mod_32[j][j] = cos_r;
+
+                //Calculate transposes of modified U and V matrices.
+                transpose_32(*U_mod_T_32, U_mod_32);
+                transpose_32(*V_mod_T_32, V_mod_32);
+
+                //Update U to its new iteration by multiplying itself with modified U.
+                copy_32(*temp_32, U_32);
+                zero_32(*U_32);
+                multiply_32(*U_32, temp_32, U_mod_T_32);
+
+                //Update V to its new iteration by multiplying itself with modified V.
+                copy_32(*temp_32, V_32);
+                zero_32(*V_32);
+                multiply_32(*V_32, temp_32, V_mod_T_32);
+
+                //Update M by multiplying it with modified U and transpose of modified V.
+                zero_32(*temp_32);
+                multiply_32(*temp_32, U_mod_32, M_32);
+                zero_32(*M_32);
+                multiply_32(*M_32, temp_32, V_mod_T_32);
+
+                //Reset modified U and V matrices back to the identity matrix.
+                zero_32(*U_mod_32);
+                zero_32(*V_mod_32);
+
+                U_mod_32[0][0] = (1 << FIXED_FRACTIONAL_PART);
+                U_mod_32[1][1] = (1 << FIXED_FRACTIONAL_PART);
+                U_mod_32[2][2] = (1 << FIXED_FRACTIONAL_PART);
+                U_mod_32[3][3] = (1 << FIXED_FRACTIONAL_PART);
+
+                V_mod_32[0][0] = (1 << FIXED_FRACTIONAL_PART);
+                V_mod_32[1][1] = (1 << FIXED_FRACTIONAL_PART);
+                V_mod_32[2][2] = (1 << FIXED_FRACTIONAL_PART);
+                V_mod_32[3][3] = (1 << FIXED_FRACTIONAL_PART);
+
+                //Floating-point operations.
                 if (floating_arithmetic)
                 {
                     Mii = M[i][i];
@@ -665,6 +682,7 @@ int main()
                     sum_quot = sum_num / sum_denom;
                     diff_quot = diff_num / diff_denom;
 
+                    //Choose whether left and right angles are calculated using approximations or GNU functions.
                     if (floating_uses_trig_approximations)
                     {
                         theta_sum = aprx_atan2_float(sum_quot);
@@ -715,7 +733,6 @@ int main()
 
                     zero(*temp);
                     multiply(*temp, U_mod, M);
-
                     zero(*M);
                     multiply(*M, temp, V_mod_T);
 
@@ -733,74 +750,8 @@ int main()
                     V_mod[3][3] = 1;
                 }
 
-
-                //fixed-point operations
-                Mii_32 = M_32[i][i];
-                Mij_32 = M_32[i][j];
-                Mji_32 = M_32[j][i];
-                Mjj_32 = M_32[j][j];
-
-                sum_num_32 = Mji_32 + Mij_32;
-                sum_denom_32 = Mjj_32 - Mii_32;
-                diff_num_32 = Mji_32 - Mij_32;
-                diff_denom_32 = Mjj_32 + Mii_32;
-
-                sum_quot_32 = (fixed_t)((((dw_fixed_t)(sum_num_32) << 31) / sum_denom_32) >> 11);
-                diff_quot_32 = (fixed_t)((((dw_fixed_t)(diff_num_32) << 31) / diff_denom_32) >> 11);
-
-                theta_sum_32 = aprx_atan2(sum_quot_32);
-                theta_diff_32 = aprx_atan2(diff_quot_32);
-
-                theta_l_32 = (theta_sum_32 - theta_diff_32) >> 1;
-                theta_r_32 = (theta_sum_32 + theta_diff_32) >> 1;
-
-                cos_l = lookup_cos_32(theta_l_32);
-                sin_l = lookup_sin_32(theta_l_32);
-                cos_r = lookup_cos_32(theta_r_32);
-                sin_r = lookup_sin_32(theta_r_32);
-
-                U_mod_32[i][i] = cos_l;
-                U_mod_32[i][j] = -sin_l;
-                U_mod_32[j][i] = sin_l;
-                U_mod_32[j][j] = cos_l;
-
-                V_mod_32[i][i] = cos_r;
-                V_mod_32[i][j] = -sin_r;
-                V_mod_32[j][i] = sin_r;
-                V_mod_32[j][j] = cos_r;
-
-                transpose_32(*U_mod_T_32, U_mod_32);
-                transpose_32(*V_mod_T_32, V_mod_32);
-
-                copy_32(*temp_32, U_32);
-                zero_32(*U_32);
-                multiply_32(*U_32, temp_32, U_mod_T_32);
-
-                copy_32(*temp_32, V_32);
-                zero_32(*V_32);
-                multiply_32(*V_32, temp_32, V_mod_T_32);
-
-                zero_32(*temp_32);
-                multiply_32(*temp_32, U_mod_32, M_32);
-
-                zero_32(*M_32);
-                multiply_32(*M_32, temp_32, V_mod_T_32);
-
-                zero_32(*U_mod_32);
-                zero_32(*V_mod_32);
-
-                U_mod_32[0][0] = (1 << FIXED_FRACTIONAL_PART);
-                U_mod_32[1][1] = (1 << FIXED_FRACTIONAL_PART);
-                U_mod_32[2][2] = (1 << FIXED_FRACTIONAL_PART);
-                U_mod_32[3][3] = (1 << FIXED_FRACTIONAL_PART);
-
-                V_mod_32[0][0] = (1 << FIXED_FRACTIONAL_PART);
-                V_mod_32[1][1] = (1 << FIXED_FRACTIONAL_PART);
-                V_mod_32[2][2] = (1 << FIXED_FRACTIONAL_PART);
-                V_mod_32[3][3] = (1 << FIXED_FRACTIONAL_PART);
-
-
-                //debugging printf statements
+                //Debugging printf statements.
+                //Display matrix indices.
                 if (Mkk)
                 {
                     printf("M[i][i] = %f\n", Mii);
@@ -816,6 +767,7 @@ int main()
                     printf("\n");
                 }
 
+                //Display matrix index operations.
                 if (num_denom)
                 {
                     printf("sum_num =       M[j][i] + M[i][j] =     %f\n", sum_num);
@@ -831,6 +783,7 @@ int main()
                     printf("\n");
                 }
 
+                //Display quotients from matrix index operations.
                 if (quot)
                 {
                     printf("sum_quot =      sum_num / sum_denom =       %f\n", sum_quot);
@@ -842,26 +795,19 @@ int main()
                     printf("\n");
                 }
 
+                //Display SUM and DIFF angles.
                 if (theta_sumdiff)
                 {
-                    printf("theta_sum =     atan(sum_quot) =        %f\n", atan(sum_quot));
-                    printf("theta_diff =    atan(diff_quot) =       %f\n", atan(diff_quot));
-                    printf("\n");
-
                     printf("theta_sum =     aprx_atan2_float(sum_quot) =        %f\n", theta_sum);
                     printf("theta_diff =    aprx_atan2_float(diff_quot) =       %f\n", theta_diff);
-                    printf("\n");
-
-                    printf("theta_sum * 2^20 =     aprx_atan2_float(sum_quot) =        %f\n", round(theta_sum * 1048576));
-                    printf("theta_diff * 2^20 =    aprx_atan2_float(diff_quot) =       %f\n", round(theta_diff * 1048576));
                     printf("\n");
 
                     printf("theta_sum_32 =     aprx_atan(sum_quot_32) =        %d\n", theta_sum_32);
                     printf("theta_diff_32 =    aprx_atan(diff_quot_32) =       %d\n", theta_diff_32);
                     printf("\n");
-
                 }
 
+                //Display left and right angles.
                 if (theta_LR)
                 {
                     printf("theta_l =       (theta_sum - theta_diff) / 2 =    %f\n", theta_l);
@@ -871,9 +817,9 @@ int main()
                     printf("theta_l_32 =       (theta_sum_32 - theta_diff_32) / 2 =    %d\n", theta_l_32);
                     printf("theta_r_32 =       (theta_sum_32 + theta_diff_32) / 2 =    %d\n", theta_r_32);
                     printf("\n");
-
                 }
 
+                //Display output from the wrap2pi function.
                 if (wrap2pi_debug)
                 {
                     printf("wrap2pi_float(theta_l): %f\n", wrap2pi_float(theta_l));
@@ -885,6 +831,7 @@ int main()
                     printf("\n");
                 }
 
+                //Display output from the lookupindex function.
                 if (lookupindex_debug)
                 {
                     printf("lookupindex(theta_l): %d\n", lookupindex(theta_l));
@@ -896,6 +843,7 @@ int main()
                     printf("\n");
                 }
 
+                //Display GNU plane rotations.
                 if (cos_sin_LR)
                 {
                     printf("cos(theta_l): %f\n", cos(theta_l));
@@ -911,6 +859,7 @@ int main()
                     printf("\n");
                 }
 
+                //Display lookup table approximations of plane rotations.
                 if (lookup_cos_sin)
                 {
                     printf("lookup_cos(theta_l): %f\n", lookup_cos(theta_l));
@@ -932,6 +881,7 @@ int main()
                     printf("\n");
                 }
 
+                //Display U and V matrices every iteration.
                 if (debug_matrices)
                 {
                     printf("U:\n");
@@ -947,6 +897,7 @@ int main()
                     print4i(V_32);
                 }
 
+                //Display M every iteration.
                 if (debug_iterations)
                 {
                     printf("M:\n");
@@ -961,7 +912,10 @@ int main()
         }
     }
 
-    printf("End\n\n");
+    if (debug_start_end)
+    {
+        printf("End\n\n");
+    }
 
     if (floating_arithmetic)
     {
@@ -970,27 +924,30 @@ int main()
         printf("\n\n");
     }
 
-    printf("M_32:\n");
-    print4i(M_32);
-    printf("\n\n");
-
-    for (unsigned int i = 0; i < 4; i++)
+    if (debug_start_end)
     {
-        for (unsigned int j = 0; j < 4; j++)
+        //Convert fixed-point matrix M back to float M.
+        for (unsigned int i = 0; i < 4; i++)
         {
-            //M[i][j] = (float)(M_32[i][j]) / 1048576 * 1.0;
-
-            M[i][j] = fix2float(M_32[i][j]);
+            for (unsigned int j = 0; j < 4; j++)
+            {
+                M[i][j] = fix2float(M_32[i][j]);
+            }
         }
+
+        printf("M_32:\n");
+        print4i(M_32);
+        printf("\n\n");
+
+        printf("M (M_32 scaled down):\n");
+        print4f(M);
+        printf("\n\n");
     }
 
-    printf("M (M_32 scaled down):\n");
-    print4f(M);
-    printf("\n\n");
-
+    //Print time elapsed to the console in microseconds.
     gettimeofday(&end, NULL);
-    double time_taken = (end.tv_sec * 1 + (end.tv_usec) / 1 ) - (start.tv_sec * 1 + (start.tv_usec) / 1 ); // in seconds
-    printf("time program took %d microseconds to execute\n", (int)time_taken);
+    double time_taken = (end.tv_sec + (end.tv_usec) ) - (start.tv_sec + (start.tv_usec) );
+    printf("Program took %d microseconds to execute.\n", (int)time_taken);
 
     return 0;
 }
